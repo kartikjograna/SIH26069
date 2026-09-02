@@ -1,0 +1,38 @@
+# One-command demo stack:  docker compose up --build
+#
+# Dashboard -> http://localhost:8080   (nginx proxies /api and /ws to backend)
+# API docs  -> http://localhost:8000/docs
+#
+# SQLite is fine for the demo. For the production stack, point DATABASE_URL at
+# PostgreSQL/TimescaleDB and drop the sqlite volume.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:///./data/weather.db
+      DEBUG: "false"
+      CONFIDENCE_THRESHOLD_HIGH: "0.85"
+      CONFIDENCE_THRESHOLD_MEDIUM: "0.60"
+    volumes:
+      # Named volume so ingested events survive a restart.
+      - weather-data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  weather-data:

@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.env
+
+# Data (regenerate with scripts/seed.py)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/*.local
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

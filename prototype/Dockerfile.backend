@@ -1,0 +1,26 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install deps first so the layer caches across code changes.
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ ./backend/
+COPY scripts/ ./scripts/
+
+RUN mkdir -p data models
+
+ENV DATABASE_URL=sqlite+aiosqlite:///./data/weather.db \
+    APP_HOST=0.0.0.0 \
+    APP_PORT=8000 \
+    DEBUG=false \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=5 \
+  CMD python -c "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else sys.exit(1)"
+
+# DEBUG=false above disables uvicorn's reloader, which must stay off in a container.
+CMD ["python", "-m", "backend.main"]
