@@ -1,11 +1,9 @@
 services:
-  # PostgreSQL database (free tier - data persists but no guaranteed disk)
+  # PostgreSQL database (free tier)
   - type: pserv
     name: weather-analytics-db
     plan: free
     region: singapore
-    databaseName: weather_analytics
-    databaseUser: weather_user
 
   # FastAPI backend
   - type: web
