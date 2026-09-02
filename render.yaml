@@ -1,0 +1,52 @@
+services:
+  # PostgreSQL database with TimescaleDB
+  - type: pserv
+    name: weather-analytics-db
+    env: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./prototype/Dockerfile.timescale
+    dockerContext: ./prototype
+    envVars:
+      - key: POSTGRES_DB
+        value: weather_analytics
+      - key: POSTGRES_USER
+        generateValue: true
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+    disk:
+      name: weather-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 10
+
+  # FastAPI backend
+  - type: web
+    name: weather-analytics-api
+    env: python
+    region: singapore
+    plan: free
+    branch: main
+    rootDir: prototype
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: weather-analytics-db
+          property: connectionString
+      - key: DEBUG
+        value: false
+      - key: SQL_ECHO
+        value: false
+      - key: RELOAD
+        value: false
+      - key: USE_MOCK_MODELS
+        value: true
+      - key: CONFIDENCE_THRESHOLD_HIGH
+        value: 0.85
+      - key: CONFIDENCE_THRESHOLD_MEDIUM
+        value: 0.60
+      - key: WS_PING_INTERVAL
+        value: 20
+      - key: CORS_ORIGINS
+        value: "*"
