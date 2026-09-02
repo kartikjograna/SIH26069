@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "echo 'Using custom build command'",
+  "devCommand": "cd frontend && npm run dev",
+  "framework": null,
+  "env": {
+    "VITE_API_BASE": "@vite_api_base"
+  }
+}

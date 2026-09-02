@@ -1,0 +1,4 @@
+FROM timescale/timescaledb:latest-pg16
+
+# Enable TimescaleDB extension on database initialization
+RUN echo "shared_preload_libraries = 'timescaledb'" >> /usr/share/postgresql/postgresql.conf.sample

@@ -9,7 +9,16 @@ load_dotenv(ROOT_DIR / ".env")
 
 class Settings:
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/weather.db")
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "sqlite+aiosqlite:///./data/weather.db"
+    )
+
+    # CORS
+    CORS_ORIGINS: list[str] = os.getenv(
+        "CORS_ORIGINS",
+        "*"  # Allow all in dev; set specific domains in production
+    ).split(",")
 
     # App
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")

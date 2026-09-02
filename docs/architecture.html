@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Weather Big Data Analytics Platform - Architecture</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f3f4f6;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+            --layer-sources: #3B82F6;
+            --layer-ingestion: #10B981;
+            --layer-processing: #8B5CF6;
+            --layer-storage: #F59E0B;
+            --layer-application: #6366F1;
+            --layer-infrastructure: #6B7280;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #111827;
+                --bg-secondary: #1f2937;
+                --text-primary: #f9fafb;
+                --text-secondary: #9ca3af;
+                --border-color: #374151;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--bg-secondary);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: var(--layer-application);
+            color: white;
+            border-color: var(--layer-application);
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 140px);
+        }
+
+        .diagram-container {
+            flex: 1;
+            overflow: auto;
+            padding: 2rem;
+        }
+
+        .sidebar {
+            width: 400px;
+            background: var(--bg-secondary);
+            border-left: 2px solid var(--border-color);
+            overflow-y: auto;
+            padding: 2rem;
+            transition: transform 0.3s;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(100%);
+        }
+
+        .layer {
+            margin-bottom: 3rem;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid;
+        }
+
+        .layer-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+
+        .layer-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .components-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .component {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .component:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+            border-color: currentColor;
+        }
+
+        .component:focus {
+            outline: 3px solid var(--layer-application);
+            outline-offset: 2px;
+        }
+
+        .component-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .component-tech {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .component-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .complexity-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .complexity-low { background: #10B981; }
+        .complexity-medium { background: #F59E0B; }
+        .complexity-high { background: #EF4444; }
+
+        .detail-panel h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-section h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-section p, .detail-section ul {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .detail-section ul {
+            list-style: none;
+            padding-left: 1rem;
+        }
+
+        .detail-section li:before {
+            content: "→ ";
+            margin-right: 0.5rem;
+        }
+
+        .code-snippet {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 0.25rem;
+        }
+
+        .flow-arrows {
+            margin: 2rem 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 50vh;
+                border-left: none;
+                border-top: 2px solid var(--border-color);
+            }
+
+            .components-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .close-btn {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+
+        @media print {
+            .header, .controls, .sidebar {
+                display: none;
+            }
+            .diagram-container {
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌦️ National Weather Big Data Analytics Platform</h1>
+        <p>Ministry of Earth Sciences | India Meteorological Department | SIH 2026</p>
+        <div class="controls">
+            <button class="btn active" id="overviewBtn">Overview</button>
+            <button class="btn" id="detailedBtn">Detailed View</button>
+            <button class="btn" id="animateBtn">Animate Flow</button>
+            <button class="btn" id="legendBtn">Toggle Legend</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="diagram-container" id="diagramContainer">
+            <div id="legendContainer" class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--layer-sources);"></div>
+                    <span>Data Sources</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--layer-ingestion);"></div>
+                    <span>Ingestion Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--layer-processing);"></div>
+                    <span>Processing/ML</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--layer-storage);"></div>
+                    <span>Storage Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--layer-application);"></div>
+                    <span>Application Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--layer-infrastructure);"></div>
+                    <span>Infrastructure</span>
+                </div>
+                <div class="legend-item">
+                    <div class="complexity-badge complexity-low"></div>
+                    <span>Low Complexity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="complexity-badge complexity-medium"></div>
+                    <span>Medium Complexity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="complexity-badge complexity-high"></div>
+                    <span>High Complexity</span>
+                </div>
+            </div>
+
+            <!-- Architecture Layers -->
+            <div id="architectureLayers"></div>
+        </div>
+
+        <div class="sidebar" id="sidebar">
+            <button class="close-btn" id="closeBtn" aria-label="Close sidebar">×</button>
+            <div id="detailPanel">
+                <h2>Architecture Overview</h2>
+                <div class="detail-section">
+                    <h3>About This System</h3>
+                    <p>This platform collects real-time weather data from multiple sources, processes it using AI/ML for verification and categorization, and provides comprehensive analytics through an interactive dashboard.</p>
+                </div>
+                <div class="detail-section">
+                    <h3>Key Features</h3>
+                    <ul>
+                        <li>Real-time data ingestion from social media and APIs</li>
+                        <li>AI-powered fake news detection</li>
+                        <li>Automatic event categorization</li>
+                        <li>Duplicate removal and source verification</li>
+                        <li>Interactive geospatial visualization</li>
+                        <li>Admin panel for manual oversight</li>
+                    </ul>
+                </div>
+                <div class="detail-section">
+                    <h3>Getting Started</h3>
+                    <p>Click on any component to see detailed information including technology alternatives, implementation complexity, and sample configurations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const architectureData = {
+            layers: [
+                {
+                    id: 'sources',
+                    name: 'Data Sources',
+                    icon: '📡',
+                    color: 'var(--layer-sources)',
+                    components: [
+                        {
+                            id: 'twitter',
+                            name: 'Social Media',
+                            tech: 'Twitter/X API, Instagram API',
+                            desc: 'Collect posts tagged with #IMD and weather hashtags',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Integrates with social media platforms to collect real-time weather-related posts, images, and videos. Monitors hashtags like #IMD, #WeatherAlert, and location-based weather tags.',
+                                features: [
+                                    'OAuth 2.0 authentication',
+                                    'Real-time streaming API',
+                                    'Rate limit handling',
+                                    'Metadata extraction (location, timestamp)',
+                                    'Media download and storage'
+                                ],
+                                alternatives: ['Tweepy (Python)', 'Twitter4J (Java)', 'Facebook Graph API'],
+                                integration: 'Pushes to Kafka topics: social-media-raw',
+                                sample: `import tweepy\n\nauth = tweepy.OAuthHandler(api_key, api_secret)\napi = tweepy.API(auth)\n\nfor tweet in tweepy.Cursor(api.search_tweets, q="#IMD").items(100):\n    kafka_producer.send('social-media-raw', tweet._json)`
+                            }
+                        },
+                        {
+                            id: 'scrapers',
+                            name: 'Web Scrapers',
+                            tech: 'Scrapy, BeautifulSoup',
+                            desc: 'Scrape weather data from news and weather websites',
+                            complexity: 'low',
+                            details: {
+                                description: 'Automated web scrapers that collect weather information from news websites, weather portals, and government weather bulletins.',
+                                features: [
+                                    'Scheduled scraping with Scrapy',
+                                    'Anti-bot detection handling',
+                                    'HTML parsing and data extraction',
+                                    'Error handling and retry logic',
+                                    'Respect robots.txt'
+                                ],
+                                alternatives: ['Selenium (for JS-heavy sites)', 'Puppeteer', 'Apache Nutch'],
+                                integration: 'Pushes to Kafka topics: web-scrape-raw',
+                                sample: `import scrapy\n\nclass WeatherSpider(scrapy.Spider):\n    name = 'weather'\n    start_urls = ['https://weather.example.com']\n    \n    def parse(self, response):\n        yield {\n            'title': response.css('h1::text').get(),\n            'content': response.css('.content::text').get()\n        }`
+                            }
+                        },
+                        {
+                            id: 'citizen',
+                            name: 'Citizen Reports',
+                            tech: 'REST API',
+                            desc: 'Public API for citizen-submitted weather observations',
+                            complexity: 'low',
+                            details: {
+                                description: 'Mobile and web API endpoint allowing citizens to submit weather observations with photos, location, and descriptions.',
+                                features: [
+                                    'RESTful API with JSON payloads',
+                                    'JWT authentication (optional)',
+                                    'GPS location validation',
+                                    'Image upload (max 10MB)',
+                                    'Rate limiting per user',
+                                    'Spam detection'
+                                ],
+                                alternatives: ['GraphQL API', 'gRPC'],
+                                integration: 'Direct writes to MongoDB + Kafka notification',
+                                sample: `POST /api/v1/reports\nContent-Type: application/json\n\n{\n  "description": "Heavy rainfall",\n  "location": {"lat": 28.6139, "lng": 77.2090},\n  "category": "rainfall",\n  "severity": "high",\n  "media": ["base64_image_data"]\n}`
+                            }
+                        },
+                        {
+                            id: 'public-data',
+                            name: 'Public Datasets',
+                            tech: 'IMD APIs, Open Data',
+                            desc: 'Official IMD data and public weather datasets',
+                            complexity: 'low',
+                            details: {
+                                description: 'Integration with official India Meteorological Department APIs and public weather datasets for ground truth and validation.',
+                                features: [
+                                    'Scheduled data pulls',
+                                    'Historical data import',
+                                    'Real-time weather station feeds',
+                                    'Satellite imagery',
+                                    'Radar data'
+                                ],
+                                alternatives: ['OpenWeatherMap', 'NOAA APIs', 'Weather Underground'],
+                                integration: 'Batch import to PostgreSQL + real-time to Kafka',
+                                sample: `import requests\n\nresponse = requests.get('https://api.imd.gov.in/weather/current')\ndata = response.json()\nkafka_producer.send('imd-official', data)`
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'ingestion',
+                    name: 'Data Ingestion Layer',
+                    icon: '⚡',
+                    color: 'var(--layer-ingestion)',
+                    components: [
+                        {
+                            id: 'kafka',
+                            name: 'Message Queue',
+                            tech: 'Apache Kafka',
+                            desc: 'Real-time streaming data pipeline',
+                            complexity: 'high',
+                            details: {
+                                description: 'Distributed streaming platform that handles all incoming data streams. Acts as the central nervous system for real-time data flow.',
+                                features: [
+                                    'High-throughput message streaming',
+                                    'Fault-tolerant persistence',
+                                    'Multi-consumer support',
+                                    'Topic partitioning',
+                                    'Message replay capability'
+                                ],
+                                alternatives: ['Apache Pulsar', 'RabbitMQ', 'AWS Kinesis'],
+                                integration: 'Connects all sources to processing layer',
+                                sample: `# Create topics\nkafka-topics.sh --create --topic social-media-raw\nkafka-topics.sh --create --topic web-scrape-raw\nkafka-topics.sh --create --topic citizen-reports\n\n# Configuration\nnum.partitions=10\nreplication.factor=3\nretention.ms=86400000`
+                            }
+                        },
+                        {
+                            id: 'nifi',
+                            name: 'Data Flow',
+                            tech: 'Apache NiFi',
+                            desc: 'Visual data flow automation and routing',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Web-based interface for designing data flow pipelines. Provides visual routing, transformation, and system mediation logic.',
+                                features: [
+                                    'Drag-and-drop flow design',
+                                    'Guaranteed delivery',
+                                    'Back pressure handling',
+                                    'Priority queuing',
+                                    'Data provenance tracking'
+                                ],
+                                alternatives: ['Apache Airflow', 'StreamSets', 'AWS Glue'],
+                                integration: 'Orchestrates data movement between Kafka and storage',
+                                sample: `# NiFi Flow\n1. ConsumeKafka → ExtractMetadata\n2. RouteOnAttribute (by source type)\n3. PutMongoDB / PutSQL\n4. UpdateAttribute (add processing timestamp)`
+                            }
+                        },
+                        {
+                            id: 'api-gateway',
+                            name: 'API Gateway',
+                            tech: 'Kong / Nginx',
+                            desc: 'Unified entry point for all external requests',
+                            complexity: 'medium',
+                            details: {
+                                description: 'API gateway that handles authentication, rate limiting, request routing, and load balancing for all incoming API calls.',
+                                features: [
+                                    'Rate limiting and throttling',
+                                    'JWT authentication',
+                                    'Request/response transformation',
+                                    'Load balancing',
+                                    'API analytics and monitoring'
+                                ],
+                                alternatives: ['AWS API Gateway', 'Tyk', 'Express Gateway'],
+                                integration: 'Routes citizen reports and API requests to backend services',
+                                sample: `# Kong configuration\nservices:\n  - name: citizen-reports\n    url: http://backend:3000\n    routes:\n      - paths: [/api/reports]\n    plugins:\n      - name: rate-limiting\n        config:\n          minute: 100`
+                            }
+                        },
+                        {
+                            id: 'webhooks',
+                            name: 'Webhook Receivers',
+                            tech: 'Express.js / FastAPI',
+                            desc: 'Handle webhook callbacks from external services',
+                            complexity: 'low',
+                            details: {
+                                description: 'Lightweight webhook endpoints that receive real-time notifications from external services and push them into the processing pipeline.',
+                                features: [
+                                    'Signature verification',
+                                    'Async processing',
+                                    'Payload validation',
+                                    'Retry handling',
+                                    'Event logging'
+                                ],
+                                alternatives: ['AWS Lambda', 'Google Cloud Functions', 'Azure Functions'],
+                                integration: 'Receives webhooks and pushes to Kafka',
+                                sample: `from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.post("/webhooks/weather")\nasync def webhook_handler(payload: dict):\n    # Verify signature\n    # Validate payload\n    await kafka.send('webhooks', payload)\n    return {"status": "received"}`
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'processing',
+                    name: 'Processing & ML/AI Layer',
+                    icon: '🧠',
+                    color: 'var(--layer-processing)',
+                    components: [
+                        {
+                            id: 'spark',
+                            name: 'Batch Processing',
+                            tech: 'Apache Spark',
+                            desc: 'Large-scale batch data processing',
+                            complexity: 'high',
+                            details: {
+                                description: 'Distributed computing system for large-scale data processing. Handles ETL jobs, aggregations, and ML model training.',
+                                features: [
+                                    'In-memory computation',
+                                    'SQL and DataFrame APIs',
+                                    'MLlib for machine learning',
+                                    'Fault-tolerant execution',
+                                    'Support for Python, Scala, Java'
+                                ],
+                                alternatives: ['Apache Hadoop MapReduce', 'Apache Beam', 'Dask'],
+                                integration: 'Reads from Kafka and databases, writes to storage layer',
+                                sample: `from pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName("WeatherETL").getOrCreate()\n\ndf = spark.read.format("kafka")\\\n    .option("subscribe", "social-media-raw")\\\n    .load()\n\ndf_processed = df.select("value").groupBy("location").count()`
+                            }
+                        },
+                        {
+                            id: 'flink',
+                            name: 'Stream Processing',
+                            tech: 'Apache Flink',
+                            desc: 'Real-time stream processing',
+                            complexity: 'high',
+                            details: {
+                                description: 'Stateful stream processing engine for real-time analytics and event-driven applications. Processes Kafka streams in real-time.',
+                                features: [
+                                    'Event-time processing',
+                                    'Exactly-once semantics',
+                                    'Low-latency (milliseconds)',
+                                    'Stateful computations',
+                                    'Complex event processing (CEP)'
+                                ],
+                                alternatives: ['Spark Streaming', 'Apache Storm', 'Kafka Streams'],
+                                integration: 'Consumes from Kafka, enriches data, triggers alerts',
+                                sample: `DataStream<WeatherEvent> stream = env\n    .addSource(new FlinkKafkaConsumer<>("weather-events", ...))\n    .keyBy(event -> event.getLocation())\n    .window(TumblingEventTimeWindows.of(Time.minutes(5)))\n    .aggregate(new EventAggregator());`
+                            }
+                        },
+                        {
+                            id: 'ml-fake',
+                            name: 'Fake News Detector',
+                            tech: 'BERT / DistilBERT',
+                            desc: 'AI model to detect misinformation',
+                            complexity: 'high',
+                            details: {
+                                description: 'Deep learning model trained to identify fake or misleading weather reports by analyzing text patterns, source credibility, and cross-referencing with trusted sources.',
+                                features: [
+                                    'Transfer learning with BERT',
+                                    'Multi-class classification',
+                                    'Confidence scoring',
+                                    'Explainable predictions',
+                                    'Continuous retraining'
+                                ],
+                                alternatives: ['RoBERTa', 'XLNet', 'Traditional ML (Naive Bayes, SVM)'],
+                                integration: 'REST API served via TensorFlow Serving or FastAPI',
+                                sample: `from transformers import BertForSequenceClassification\n\nmodel = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)\n\n# Inference\ninputs = tokenizer(text, return_tensors="pt")\noutputs = model(**inputs)\nfake_score = torch.softmax(outputs.logits, dim=1)[0][1].item()`
+                            }
+                        },
+                        {
+                            id: 'ml-duplicate',
+                            name: 'Duplicate Detector',
+                            tech: 'MinHash / LSH',
+                            desc: 'Remove duplicate reports',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Identifies near-duplicate reports using locality-sensitive hashing and perceptual hashing for text and images.',
+                                features: [
+                                    'Text similarity (Jaccard, cosine)',
+                                    'Image perceptual hashing',
+                                    'Temporal-spatial clustering',
+                                    'Sub-linear time complexity',
+                                    'Configurable similarity threshold'
+                                ],
+                                alternatives: ['Elasticsearch More Like This', 'Simhash', 'Deep learning embeddings'],
+                                integration: 'Python microservice, called during ingestion',
+                                sample: `from datasketch import MinHash, MinHashLSH\n\nlsh = MinHashLSH(threshold=0.8, num_perm=128)\n\nm1 = MinHash(num_perm=128)\nfor word in text1.split():\n    m1.update(word.encode('utf8'))\n\nlsh.insert("doc1", m1)\nresult = lsh.query(m2)  # Find duplicates`
+                            }
+                        },
+                        {
+                            id: 'ml-classifier',
+                            name: 'Event Classifier',
+                            tech: 'Multi-label CNN',
+                            desc: 'Categorize weather events',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Multi-label classification model that categorizes weather events into types like rainfall, flooding, heatwave, fog, thunderstorm, etc.',
+                                features: [
+                                    'Multi-label classification',
+                                    'Text + image fusion',
+                                    'Hierarchical categories',
+                                    'Severity estimation',
+                                    'Location-aware predictions'
+                                ],
+                                alternatives: ['Random Forest', 'XGBoost', 'LSTM for text'],
+                                integration: 'FastAPI endpoint, called by Flink stream processor',
+                                sample: `import tensorflow as tf\n\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Embedding(vocab_size, 128),\n    tf.keras.layers.LSTM(64),\n    tf.keras.layers.Dense(10, activation='sigmoid')  # Multi-label\n])\n\npredictions = model.predict(text_vector)`
+                            }
+                        },
+                        {
+                            id: 'media-processing',
+                            name: 'Media Processing',
+                            tech: 'OpenCV, FFmpeg',
+                            desc: 'Image and video analysis',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Processes images and videos to extract weather-related information, detect manipulations, and generate thumbnails.',
+                                features: [
+                                    'EXIF metadata extraction',
+                                    'Image forensics (ELA analysis)',
+                                    'Object detection (clouds, floods)',
+                                    'Video transcoding',
+                                    'Thumbnail generation'
+                                ],
+                                alternatives: ['PIL/Pillow', 'ImageMagick', 'Cloud Vision API'],
+                                integration: 'Async job queue (Celery), stores results in object storage',
+                                sample: `import cv2\nfrom PIL import Image\nfrom PIL.ExifTags import TAGS\n\nimage = Image.open('photo.jpg')\nexif = {TAGS.get(k): v for k, v in image._getexif().items()}\nlat, lng = exif.get('GPSInfo')\n\n# Detect weather objects\nnet = cv2.dnn.readNet('yolo.weights')\nblob = cv2.dnn.blobFromImage(image)\nnet.setInput(blob)\noutputs = net.forward()`
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'storage',
+                    name: 'Storage Layer',
+                    icon: '💾',
+                    color: 'var(--layer-storage)',
+                    components: [
+                        {
+                            id: 'postgres',
+                            name: 'Time-Series DB',
+                            tech: 'PostgreSQL + TimescaleDB',
+                            desc: 'Structured weather data and time-series',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Primary relational database extended with TimescaleDB for efficient time-series data storage. Stores structured weather events, user data, and system metadata.',
+                                features: [
+                                    'ACID compliance',
+                                    'Time-series optimizations',
+                                    'Automatic partitioning',
+                                    'Continuous aggregates',
+                                    'PostGIS for geospatial data'
+                                ],
+                                alternatives: ['InfluxDB', 'Cassandra', 'MySQL'],
+                                integration: 'Primary data store for structured data, queried by backend API',
+                                sample: `CREATE TABLE weather_events (\n  id UUID PRIMARY KEY,\n  timestamp TIMESTAMPTZ NOT NULL,\n  location GEOGRAPHY(POINT),\n  event_type VARCHAR(50),\n  severity INT,\n  source VARCHAR(100)\n);\n\nSELECT create_hypertable('weather_events', 'timestamp');`
+                            }
+                        },
+                        {
+                            id: 'mongodb',
+                            name: 'Document Store',
+                            tech: 'MongoDB',
+                            desc: 'Unstructured data, posts, raw JSON',
+                            complexity: 'low',
+                            details: {
+                                description: 'NoSQL database for storing unstructured and semi-structured data like social media posts, raw JSON from APIs, and flexible schema data.',
+                                features: [
+                                    'Flexible schema',
+                                    'Horizontal scaling (sharding)',
+                                    'Rich query language',
+                                    'Geospatial indexes',
+                                    'Change streams for real-time'
+                                ],
+                                alternatives: ['CouchDB', 'DynamoDB', 'Firestore'],
+                                integration: 'Stores raw ingested data, queried for full-text search',
+                                sample: `db.weather_posts.insertOne({\n  source: "twitter",\n  text: "Heavy rainfall in Mumbai",\n  hashtags: ["#IMD", "#MumbaiRains"],\n  location: {type: "Point", coordinates: [72.8777, 19.0760]},\n  timestamp: ISODate(),\n  media: ["s3://bucket/image1.jpg"]\n});`
+                            }
+                        },
+                        {
+                            id: 'elasticsearch',
+                            name: 'Search Engine',
+                            tech: 'Elasticsearch',
+                            desc: 'Full-text search and analytics',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Distributed search and analytics engine. Provides fast full-text search, aggregations, and real-time analytics for dashboard queries.',
+                                features: [
+                                    'Full-text search',
+                                    'Real-time indexing',
+                                    'Aggregation framework',
+                                    'Geospatial queries',
+                                    'Kibana integration'
+                                ],
+                                alternatives: ['Apache Solr', 'Algolia', 'Typesense'],
+                                integration: 'Data synced from PostgreSQL/MongoDB via Logstash',
+                                sample: `PUT weather_events/_doc/1\n{\n  "timestamp": "2026-08-31T12:00:00Z",\n  "event_type": "rainfall",\n  "location": {"lat": 28.6139, "lon": 77.2090},\n  "description": "Heavy rainfall reported"\n}\n\nGET weather_events/_search\n{\n  "query": {"match": {"description": "rainfall"}}\n}`
+                            }
+                        },
+                        {
+                            id: 'minio',
+                            name: 'Object Storage',
+                            tech: 'MinIO / AWS S3',
+                            desc: 'Store images, videos, and large files',
+                            complexity: 'low',
+                            details: {
+                                description: 'S3-compatible object storage for media files, model artifacts, and backups. Highly scalable and cost-effective.',
+                                features: [
+                                    'S3-compatible API',
+                                    'Distributed storage',
+                                    'Versioning',
+                                    'Lifecycle policies',
+                                    'Encryption at rest'
+                                ],
+                                alternatives: ['AWS S3', 'Google Cloud Storage', 'Azure Blob Storage'],
+                                integration: 'Stores media files, referenced by URL in databases',
+                                sample: `from minio import Minio\n\nclient = Minio('play.min.io', access_key='...', secret_key='...')\n\nclient.fput_object(\n    'weather-media',\n    'images/2026/08/photo1.jpg',\n    '/tmp/photo1.jpg'\n)\n\nurl = client.presigned_get_object('weather-media', 'images/2026/08/photo1.jpg')`
+                            }
+                        },
+                        {
+                            id: 'redis',
+                            name: 'Cache Layer',
+                            tech: 'Redis',
+                            desc: 'In-memory caching for fast access',
+                            complexity: 'low',
+                            details: {
+                                description: 'In-memory data structure store used for caching frequently accessed data, session management, and real-time leaderboards.',
+                                features: [
+                                    'Sub-millisecond latency',
+                                    'Pub/Sub messaging',
+                                    'Sorted sets for rankings',
+                                    'TTL support',
+                                    'Persistence options'
+                                ],
+                                alternatives: ['Memcached', 'Hazelcast', 'Apache Ignite'],
+                                integration: 'Caches API responses, stores session data',
+                                sample: `import redis\n\nr = redis.Redis(host='localhost', port=6379)\n\n# Cache API response\nr.setex('weather:mumbai:latest', 300, json.dumps(data))\n\n# Retrieve\ncached = r.get('weather:mumbai:latest')\nif cached:\n    return json.loads(cached)`
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'application',
+                    name: 'Application & Visualization Layer',
+                    icon: '📊',
+                    color: 'var(--layer-application)',
+                    components: [
+                        {
+                            id: 'backend-api',
+                            name: 'Backend API',
+                            tech: 'Node.js / FastAPI',
+                            desc: 'RESTful and GraphQL APIs',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Main backend service exposing REST and GraphQL APIs for dashboard, mobile apps, and external integrations.',
+                                features: [
+                                    'RESTful endpoints',
+                                    'GraphQL for complex queries',
+                                    'JWT authentication',
+                                    'Request validation',
+                                    'API documentation (Swagger)'
+                                ],
+                                alternatives: ['Django REST Framework', 'Spring Boot', 'Express.js'],
+                                integration: 'Queries all storage systems, pushes to WebSocket server',
+                                sample: `from fastapi import FastAPI, Depends\nfrom sqlalchemy.orm import Session\n\napp = FastAPI()\n\n@app.get("/api/events")\ndef get_events(\n    date: str = None,\n    event_type: str = None,\n    db: Session = Depends(get_db)\n):\n    query = db.query(WeatherEvent)\n    if date:\n        query = query.filter(WeatherEvent.date == date)\n    return query.all()`
+                            }
+                        },
+                        {
+                            id: 'websocket',
+                            name: 'WebSocket Server',
+                            tech: 'Socket.io / WS',
+                            desc: 'Real-time updates to dashboard',
+                            complexity: 'low',
+                            details: {
+                                description: 'WebSocket server for pushing real-time updates to connected clients. Enables live dashboard updates without polling.',
+                                features: [
+                                    'Bidirectional communication',
+                                    'Room/namespace support',
+                                    'Auto-reconnection',
+                                    'Binary data support',
+                                    'Broadcast to multiple clients'
+                                ],
+                                alternatives: ['SockJS', 'Server-Sent Events', 'Pusher'],
+                                integration: 'Receives events from Kafka consumer, broadcasts to connected clients',
+                                sample: `const io = require('socket.io')(server);\n\nio.on('connection', (socket) => {\n  socket.join('weather-updates');\n});\n\n// Broadcast new event\nkafkaConsumer.on('message', (event) => {\n  io.to('weather-updates').emit('new-event', event);\n});`
+                            }
+                        },
+                        {
+                            id: 'react-dashboard',
+                            name: 'React Dashboard',
+                            tech: 'React + Next.js',
+                            desc: 'Interactive web dashboard',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Modern web application providing interactive visualizations, filtering, and analytics for weather data.',
+                                features: [
+                                    'Server-side rendering (Next.js)',
+                                    'Real-time updates via WebSocket',
+                                    'Responsive design',
+                                    'Date/event/location filters',
+                                    'Export functionality'
+                                ],
+                                alternatives: ['Vue.js', 'Angular', 'Svelte'],
+                                integration: 'Consumes backend API and WebSocket events',
+                                sample: `import { useEffect, useState } from 'react';\nimport io from 'socket.io-client';\n\nfunction Dashboard() {\n  const [events, setEvents] = useState([]);\n  \n  useEffect(() => {\n    const socket = io('http://localhost:3001');\n    socket.on('new-event', (event) => {\n      setEvents(prev => [event, ...prev]);\n    });\n  }, []);\n  \n  return <EventMap events={events} />;\n}`
+                            }
+                        },
+                        {
+                            id: 'admin-panel',
+                            name: 'Admin Panel',
+                            tech: 'React Admin',
+                            desc: 'Manual verification and system management',
+                            complexity: 'low',
+                            details: {
+                                description: 'Administrative interface for manual verification of suspicious reports, user management, and system monitoring.',
+                                features: [
+                                    'Manual verification workflow',
+                                    'User and role management',
+                                    'System health dashboard',
+                                    'Audit logs',
+                                    'Configuration management'
+                                ],
+                                alternatives: ['Django Admin', 'AdminLTE', 'Retool'],
+                                integration: 'Uses same backend API with admin authentication',
+                                sample: `import { Admin, Resource } from 'react-admin';\n\n<Admin dataProvider={dataProvider}>\n  <Resource name="events" list={EventList} edit={EventEdit} />\n  <Resource name="users" list={UserList} />\n</Admin>`
+                            }
+                        },
+                        {
+                            id: 'grafana',
+                            name: 'Monitoring Dashboard',
+                            tech: 'Grafana',
+                            desc: 'System metrics and monitoring',
+                            complexity: 'low',
+                            details: {
+                                description: 'Real-time monitoring dashboards for system health, performance metrics, and operational insights.',
+                                features: [
+                                    'Pre-built dashboards',
+                                    'Alerting rules',
+                                    'Multiple data sources',
+                                    'Custom panels',
+                                    'User authentication'
+                                ],
+                                alternatives: ['Kibana', 'Datadog', 'New Relic'],
+                                integration: 'Connects to Prometheus, Elasticsearch, PostgreSQL',
+                                sample: `# Grafana dashboard JSON\n{\n  "dashboard": {\n    "title": "Weather Platform Metrics",\n    "panels": [\n      {\n        "title": "Kafka Message Rate",\n        "targets": [{"expr": "rate(kafka_messages_total[5m])"}]\n      }\n    ]\n  }\n}`
+                            }
+                        },
+                        {
+                            id: 'mapbox',
+                            name: 'Geospatial Viz',
+                            tech: 'Mapbox / Leaflet',
+                            desc: 'Interactive maps and location visualization',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Interactive mapping library for visualizing weather events on a map with clustering, heatmaps, and custom markers.',
+                                features: [
+                                    'Custom map styles',
+                                    'Marker clustering',
+                                    'Heatmap layers',
+                                    'GeoJSON support',
+                                    'Interactive popups'
+                                ],
+                                alternatives: ['Google Maps', 'OpenLayers', 'Deck.gl'],
+                                integration: 'Integrated into React dashboard',
+                                sample: `import { Map, Marker, Popup } from 'react-leaflet';\n\n<Map center={[20.5937, 78.9629]} zoom={5}>\n  {events.map(event => (\n    <Marker key={event.id} position={event.location}>\n      <Popup>{event.description}</Popup>\n    </Marker>\n  ))}\n</Map>`
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'infrastructure',
+                    name: 'Infrastructure Layer',
+                    icon: '⚙️',
+                    color: 'var(--layer-infrastructure)',
+                    components: [
+                        {
+                            id: 'docker',
+                            name: 'Containerization',
+                            tech: 'Docker + Kubernetes',
+                            desc: 'Container orchestration and deployment',
+                            complexity: 'high',
+                            details: {
+                                description: 'Containerize all services using Docker and orchestrate with Kubernetes for scalability, reliability, and easy deployment.',
+                                features: [
+                                    'Microservices containerization',
+                                    'Auto-scaling',
+                                    'Rolling updates',
+                                    'Service discovery',
+                                    'Health checks'
+                                ],
+                                alternatives: ['Docker Swarm', 'AWS ECS', 'Nomad'],
+                                integration: 'All services run as containers orchestrated by K8s',
+                                sample: `# Dockerfile\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --production\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]\n\n# K8s Deployment\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: backend-api\nspec:\n  replicas: 3\n  template:\n    spec:\n      containers:\n      - name: api\n        image: weather-api:latest`
+                            }
+                        },
+                        {
+                            id: 'load-balancer',
+                            name: 'Load Balancer',
+                            tech: 'Nginx / HAProxy',
+                            desc: 'Distribute traffic across services',
+                            complexity: 'low',
+                            details: {
+                                description: 'Load balancer to distribute incoming requests across multiple backend instances for high availability and performance.',
+                                features: [
+                                    'Round-robin / least connections',
+                                    'SSL termination',
+                                    'Health checks',
+                                    'Rate limiting',
+                                    'Static content serving'
+                                ],
+                                alternatives: ['AWS ALB', 'Traefik', 'Envoy'],
+                                integration: 'Entry point for all HTTP/HTTPS traffic',
+                                sample: `upstream backend {\n  least_conn;\n  server backend1:3000;\n  server backend2:3000;\n  server backend3:3000;\n}\n\nserver {\n  listen 80;\n  location / {\n    proxy_pass http://backend;\n    proxy_set_header Host $host;\n  }\n}`
+                            }
+                        },
+                        {
+                            id: 'airflow',
+                            name: 'Workflow Orchestration',
+                            tech: 'Apache Airflow',
+                            desc: 'Schedule and monitor data pipelines',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Platform to programmatically author, schedule, and monitor workflows. Manages ETL jobs, ML model training, and data quality checks.',
+                                features: [
+                                    'DAG-based workflows',
+                                    'Rich scheduling (cron)',
+                                    'Retry logic',
+                                    'Web UI for monitoring',
+                                    'Extensible operators'
+                                ],
+                                alternatives: ['Prefect', 'Luigi', 'Dagster'],
+                                integration: 'Schedules Spark jobs, model retraining, data quality checks',
+                                sample: `from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom datetime import datetime\n\ndag = DAG('weather_etl', start_date=datetime(2026, 8, 31), schedule='@hourly')\n\nextract = PythonOperator(task_id='extract', python_callable=extract_data, dag=dag)\ntransform = PythonOperator(task_id='transform', python_callable=transform_data, dag=dag)\nload = PythonOperator(task_id='load', python_callable=load_data, dag=dag)\n\nextract >> transform >> load`
+                            }
+                        },
+                        {
+                            id: 'monitoring',
+                            name: 'Monitoring Stack',
+                            tech: 'Prometheus + Grafana',
+                            desc: 'Metrics collection and alerting',
+                            complexity: 'medium',
+                            details: {
+                                description: 'Complete monitoring solution with Prometheus for metrics collection and Grafana for visualization and alerting.',
+                                features: [
+                                    'Time-series metrics',
+                                    'Service discovery',
+                                    'Alerting rules',
+                                    'Multi-dimensional queries',
+                                    'Long-term storage'
+                                ],
+                                alternatives: ['Datadog', 'New Relic', 'ELK Stack'],
+                                integration: 'Collects metrics from all services, alerts on anomalies',
+                                sample: `# prometheus.yml\nscrape_configs:\n  - job_name: 'backend-api'\n    static_configs:\n      - targets: ['backend:3000']\n\nalerting:\n  alertmanagers:\n    - static_configs:\n      - targets: ['alertmanager:9093']\n\n# Alert rule\n- alert: HighErrorRate\n  expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05\n  annotations:\n    summary: "High error rate detected"`
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // Render architecture
+        function renderArchitecture() {
+            const container = document.getElementById('architectureLayers');
+            container.innerHTML = '';
+
+            architectureData.layers.forEach((layer, index) => {
+                const layerDiv = document.createElement('div');
+                layerDiv.className = 'layer';
+                layerDiv.style.animationDelay = `${index * 0.1}s`;
+
+                const header = document.createElement('div');
+                header.className = 'layer-header';
+                header.style.borderColor = layer.color;
+
+                header.innerHTML = `
+                    <div class="layer-icon" style="background: ${layer.color};">${layer.icon}</div>
+                    <div class="layer-title" style="color: ${layer.color};">${layer.name}</div>
+                `;
+
+                const grid = document.createElement('div');
+                grid.className = 'components-grid';
+
+                layer.components.forEach(component => {
+                    const compDiv = document.createElement('div');
+                    compDiv.className = 'component';
+                    compDiv.tabIndex = 0;
+                    compDiv.style.borderColor = layer.color;
+                    compDiv.setAttribute('role', 'button');
+                    compDiv.setAttribute('aria-label', `View details for ${component.name}`);
+
+                    compDiv.innerHTML = `
+                        <span class="complexity-badge complexity-${component.complexity}"></span>
+                        <div class="component-name">${component.name}</div>
+                        <div class="component-tech">${component.tech}</div>
+                        <div class="component-desc">${component.desc}</div>
+                    `;
+
+                    compDiv.addEventListener('click', () => showDetails(component, layer.color));
+                    compDiv.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') showDetails(component, layer.color);
+                    });
+
+                    grid.appendChild(compDiv);
+                });
+
+                layerDiv.appendChild(header);
+                layerDiv.appendChild(grid);
+
+                if (index < architectureData.layers.length - 1) {
+                    const arrows = document.createElement('div');
+                    arrows.className = 'flow-arrows';
+                    arrows.innerHTML = '↓↓↓';
+                    arrows.style.color = layer.color;
+                    layerDiv.appendChild(arrows);
+                }
+
+                container.appendChild(layerDiv);
+            });
+        }
+
+        function showDetails(component, color) {
+            const panel = document.getElementById('detailPanel');
+            const sidebar = document.getElementById('sidebar');
+
+            sidebar.classList.remove('hidden');
+
+            panel.innerHTML = `
+                <button class="close-btn" id="closeBtn" aria-label="Close sidebar">×</button>
+                <h2 style="color: ${color};">${component.name}</h2>
+
+                <div class="detail-section">
+                    <h3>Technology</h3>
+                    <p><strong>${component.tech}</strong></p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Description</h3>
+                    <p>${component.details.description}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Key Features</h3>
+                    <ul>
+                        ${component.details.features.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Alternatives</h3>
+                    <p>${component.details.alternatives.join(', ')}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Integration</h3>
+                    <p>${component.details.integration}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Complexity</h3>
+                    <p><span class="complexity-badge complexity-${component.complexity}"></span> ${component.complexity.toUpperCase()}</p>
+                </div>
+
+                ${component.details.sample ? `
+                <div class="detail-section">
+                    <h3>Sample Code</h3>
+                    <div class="code-snippet">${escapeHtml(component.details.sample)}</div>
+                </div>
+                ` : ''}
+            `;
+
+            document.getElementById('closeBtn').addEventListener('click', () => {
+                sidebar.classList.add('hidden');
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById('closeBtn')?.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('hidden');
+        });
+
+        document.getElementById('legendBtn').addEventListener('click', () => {
+            const legend = document.getElementById('legendContainer');
+            legend.style.display = legend.style.display === 'none' ? 'grid' : 'none';
+        });
+
+        document.getElementById('animateBtn').addEventListener('click', () => {
+            const arrows = document.querySelectorAll('.flow-arrows');
+            arrows.forEach((arrow, i) => {
+                setTimeout(() => {
+                    arrow.style.transition = 'transform 0.3s';
+                    arrow.style.transform = 'scale(1.5)';
+                    setTimeout(() => {
+                        arrow.style.transform = 'scale(1)';
+                    }, 300);
+                }, i * 200);
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('sidebar').classList.add('hidden');
+            }
+        });
+
+        // Initialize
+        renderArchitecture();
+    </script>
+</body>
+</html>
