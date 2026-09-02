@@ -22,7 +22,8 @@ class Settings:
 
     # App
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
-    APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
+    # Render uses PORT, but allow APP_PORT override for local dev
+    APP_PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     # Kept separate from DEBUG on purpose: echoing every statement is ~6k log
     # lines/minute under continuous ingestion, which buries real errors.
