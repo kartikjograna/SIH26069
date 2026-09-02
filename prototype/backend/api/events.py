@@ -135,11 +135,11 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
     # Group by category from JSON
     all_events = await db.execute(
-        select(WeatherEvent.predicted_categories).where(WeatherEvent.predicted_categories != {})
+        select(WeatherEvent.predicted_categories).where(WeatherEvent.predicted_categories.isnot(None))
     )
     by_category: dict[str, int] = {}
     for (cats,) in all_events.all():
-        if isinstance(cats, dict):
+        if isinstance(cats, dict) and cats:  # Check if dict is not empty
             top_cat = max(cats, key=cats.get) if cats else "general"
             by_category[top_cat] = by_category.get(top_cat, 0) + 1
 
