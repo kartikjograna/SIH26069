@@ -3,8 +3,16 @@ import type { LiveEvent } from '../types'
 
 export type ConnState = 'connecting' | 'open' | 'closed'
 
-/** Same-origin WS URL so the Vite proxy handles it in dev. */
+/** WebSocket URL - uses backend API in production, Vite proxy in dev. */
 function wsUrl(): string {
+  const base = import.meta.env.VITE_API_BASE
+  if (base) {
+    // Production: use backend URL
+    const url = new URL(base)
+    const scheme = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${scheme}//${url.host}/ws/stream`
+  }
+  // Dev: use same-origin (Vite proxy)
   const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${scheme}//${window.location.host}/ws/stream`
 }
