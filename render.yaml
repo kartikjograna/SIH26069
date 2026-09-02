@@ -1,23 +1,11 @@
 services:
-  # PostgreSQL database with TimescaleDB
+  # PostgreSQL database (free tier - data persists but no guaranteed disk)
   - type: pserv
     name: weather-analytics-db
-    env: docker
     plan: free
     region: singapore
-    dockerfilePath: ./prototype/Dockerfile.timescale
-    dockerContext: ./prototype
-    envVars:
-      - key: POSTGRES_DB
-        value: weather_analytics
-      - key: POSTGRES_USER
-        generateValue: true
-      - key: POSTGRES_PASSWORD
-        generateValue: true
-    disk:
-      name: weather-data
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 10
+    databaseName: weather_analytics
+    databaseUser: weather_user
 
   # FastAPI backend
   - type: web
