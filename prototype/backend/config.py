@@ -9,10 +9,9 @@ load_dotenv(ROOT_DIR / ".env")
 
 class Settings:
     # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "sqlite+aiosqlite:///./data/weather.db"
-    )
+    _db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/weather.db")
+    # Render provides postgresql:// but we need postgresql+asyncpg:// for async
+    DATABASE_URL: str = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
     # CORS
     CORS_ORIGINS: list[str] = os.getenv(
