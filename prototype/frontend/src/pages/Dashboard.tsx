@@ -37,6 +37,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
   const [selected, setSelected] = useState<EventMarker | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -177,9 +178,19 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
         />
       </div>
 
+      <button
+        type="button"
+        className="mobile-drawer-toggle"
+        onClick={() => setMobileFilterOpen((prev) => !prev)}
+        aria-expanded={mobileFilterOpen}
+      >
+        <span>⚡ Filter & Submit Report</span>
+        <span>{mobileFilterOpen ? '▲ Hide' : '▼ Show'}</span>
+      </button>
+
       <div className="dash-grid">
         {/* Left: filters + citizen report */}
-        <div className="stack">
+        <div className={`stack dash-side-left ${!mobileFilterOpen ? 'collapsed' : ''}`}>
           <FilterSidebar
             filters={filters}
             onChange={setFilters}
@@ -190,7 +201,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
         </div>
 
         {/* Centre: map + charts */}
-        <div className="stack">
+        <div className="stack dash-center">
           <div className="card">
             <div className="card-head">
               <span className="card-title">Event map — India</span>
@@ -213,13 +224,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
             />
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: 16,
-            }}
-          >
+          <div className="charts-subgrid">
             <div className="card">
               <div className="card-head">
                 <span className="card-title">Events by category</span>

@@ -103,7 +103,7 @@ export function Admin() {
         <StatTile label="Reports attributed" value={totalReports} />
       </div>
 
-      <div className="nav" style={{ marginBottom: 16, marginLeft: 0 }}>
+      <div className="admin-tabs">
         {(
           [
             ['queue', `Review queue (${queue.length})`],
@@ -127,7 +127,7 @@ export function Admin() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
+      <div className="admin-grid">
         <div className="card">
           {tab === 'queue' && (
             <>
@@ -142,79 +142,149 @@ export function Admin() {
                   Queue is clear — nothing is waiting on a human right now.
                 </div>
               ) : (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Conf.</th>
-                        <th>Location</th>
-                        <th>Report</th>
-                        <th>Source</th>
-                        <th>Flagged for</th>
-                        <th>Decision</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {queue.map((e) => (
-                        <tr
-                          key={e.id}
-                          onClick={() => setSelectedId(e.id)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <td className="num">
-                            <strong style={{ color: statusToken('manual_review').color }}>
-                              {(e.confidence_score * 100).toFixed(0)}%
-                            </strong>
-                          </td>
-                          <td>
-                            <div style={{ fontWeight: 600, fontSize: 12 }}>{e.city}</div>
-                            <div className="muted" style={{ fontSize: 11 }}>
-                              {e.state}
-                            </div>
-                          </td>
-                          <td className="cell-text">
-                            {e.text}
-                            <div style={{ marginTop: 4 }}>
-                              <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
-                          <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                            {e.verification?.reasons.length
-                              ? e.verification.reasons.join('; ')
-                              : '—'}
-                          </td>
-                          <td>
-                            <div className="btn-row">
-                              <button
-                                type="button"
-                                className="btn btn-approve"
-                                disabled={busyId === e.id}
-                                onClick={(ev) => {
-                                  ev.stopPropagation()
-                                  act(e.id, 'approve')
-                                }}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-reject"
-                                disabled={busyId === e.id}
-                                onClick={(ev) => {
-                                  ev.stopPropagation()
-                                  act(e.id, 'reject')
-                                }}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          </td>
+                <>
+                  {/* Desktop Table View */}
+                  <div className="table-wrap queue-desktop-table">
+                    <table className="queue-table">
+                      <thead>
+                        <tr>
+                          <th>Conf.</th>
+                          <th>Location</th>
+                          <th>Report</th>
+                          <th>Source</th>
+                          <th>Flagged for</th>
+                          <th className="sticky-action-col">Decision</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {queue.map((e) => (
+                          <tr
+                            key={e.id}
+                            onClick={() => setSelectedId(e.id)}
+                            style={{ cursor: 'pointer' }}
+                            className={selectedId === e.id ? 'row-selected' : ''}
+                          >
+                            <td className="num">
+                              <strong style={{ color: statusToken('manual_review').color }}>
+                                {(e.confidence_score * 100).toFixed(0)}%
+                              </strong>
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, fontSize: 12 }}>{e.city}</div>
+                              <div className="muted" style={{ fontSize: 11 }}>
+                                {e.state}
+                              </div>
+                            </td>
+                            <td className="cell-text">
+                              {e.text}
+                              <div style={{ marginTop: 4 }}>
+                                <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
+                              </div>
+                            </td>
+                            <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
+                            <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                              {e.verification?.reasons.length
+                                ? e.verification.reasons.join('; ')
+                                : '—'}
+                            </td>
+                            <td className="sticky-action-col">
+                              <div className="btn-row">
+                                <button
+                                  type="button"
+                                  className="btn btn-approve"
+                                  disabled={busyId === e.id}
+                                  onClick={(ev) => {
+                                    ev.stopPropagation()
+                                    act(e.id, 'approve')
+                                  }}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-reject"
+                                  disabled={busyId === e.id}
+                                  onClick={(ev) => {
+                                    ev.stopPropagation()
+                                    act(e.id, 'reject')
+                                  }}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards View - zero horizontal scroll, instant touch actions */}
+                  <div className="queue-mobile-list">
+                    {queue.map((e) => (
+                      <div
+                        key={e.id}
+                        className={`queue-card ${selectedId === e.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedId(e.id)}
+                      >
+                        <div className="queue-card-header">
+                          <div className="queue-card-badge-group">
+                            <span
+                              className="queue-conf-badge"
+                              style={{
+                                color: statusToken('manual_review').color,
+                                borderColor: statusToken('manual_review').color,
+                              }}
+                            >
+                              {(e.confidence_score * 100).toFixed(0)}% Conf
+                            </span>
+                            <Tag>{sourceLabel(e.source)}</Tag>
+                          </div>
+                          <span className="queue-card-location">
+                            <strong>{e.city}</strong>, {e.state}
+                          </span>
+                        </div>
+
+                        <div className="queue-card-body">
+                          <p className="queue-card-text">{e.text}</p>
+                          <div className="queue-card-meta">
+                            <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
+                            {e.verification?.reasons.length ? (
+                              <span className="queue-flag-note">
+                                ⚠ {e.verification.reasons.join('; ')}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="queue-card-actions">
+                          <button
+                            type="button"
+                            className="btn btn-approve queue-btn"
+                            disabled={busyId === e.id}
+                            onClick={(ev) => {
+                              ev.stopPropagation()
+                              act(e.id, 'approve')
+                            }}
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-reject queue-btn"
+                            disabled={busyId === e.id}
+                            onClick={(ev) => {
+                              ev.stopPropagation()
+                              act(e.id, 'reject')
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}

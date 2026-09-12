@@ -38,7 +38,10 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">Weather Analytics Platform</span>
+          <span className="brand-mark">
+            <span className="brand-title-full">Weather Analytics Platform</span>
+            <span className="brand-title-short">Wx Analytics</span>
+          </span>
           <span className="brand-sub">MoES · IMD · SIH 2026</span>
         </div>
 
@@ -57,7 +60,7 @@ export function App() {
           >
             {connLabel}
             {state === 'open' && count > 0 && (
-              <span className="muted"> · {count.toLocaleString('en-IN')} streamed</span>
+              <span className="muted live-count-text"> · {count.toLocaleString('en-IN')} streamed</span>
             )}
           </span>
           <button
