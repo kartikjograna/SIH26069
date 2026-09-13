@@ -121,8 +121,10 @@ a {
 
 @media (max-width: 640px) {
   .topbar {
-    padding: 0 10px;
-    gap: 6px;
+    padding: 8px 10px;
+    gap: 8px;
+    min-height: 56px;
+    height: auto;
     justify-content: space-between;
   }
 }
@@ -133,23 +135,12 @@ a {
   gap: 9px;
   min-width: 0;
   flex-shrink: 1;
-  overflow: hidden;
 }
 
 .brand-mark {
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.brand-title-full {
-  display: inline;
-}
-
-.brand-title-short {
-  display: none;
 }
 
 .brand-sub {
@@ -159,14 +150,15 @@ a {
 }
 
 @media (max-width: 640px) {
-  .brand-title-full {
-    display: none;
-  }
-  .brand-title-short {
-    display: inline;
+  .brand {
+    align-items: center;
   }
   .brand-mark {
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.25;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
   .brand-sub {
     display: none;
