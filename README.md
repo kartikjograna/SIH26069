@@ -140,10 +140,6 @@ light and dark separately rather than inverted.
 
 If Docker is available, skip the two-terminal setup entirely:
 
-> **Untested path.** This was written but never built — no Docker on the dev
-> machine. The two-terminal setup above is the verified one; don't make this the
-> primary demo path until you've run it once.
-
 ```bash
 cd prototype
 docker compose up --build
