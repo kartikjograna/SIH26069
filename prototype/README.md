@@ -191,9 +191,3 @@ docker compose exec backend python scripts/seed.py --count 250 --fast
 - Data sources are templated generators, not real Twitter/IMD APIs
 - SQLite instead of PostgreSQL+TimescaleDB+Elasticsearch+MinIO
 - No auth, no rate limiting
-
-Swap any of these in by replacing one file - the interfaces are stable.
-
-Be upfront about the mocked column when demoing. The claim that holds is
-*"the architecture is real and every seam is in place"* — not that the models are
-trained. See `DEMO.md` for a walkthrough that makes that distinction cleanly.

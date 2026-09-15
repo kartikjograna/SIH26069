@@ -14,10 +14,14 @@ class Settings:
     DATABASE_URL: str = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
     # CORS
-    CORS_ORIGINS: list[str] = os.getenv(
-        "CORS_ORIGINS",
-        "*"  # Allow all in dev; set specific domains in production
-    ).split(",")
+    _cors_env = os.getenv("CORS_ORIGINS", "*")
+    CORS_ORIGINS: list[str] = [
+        origin.strip() for origin in _cors_env.split(",") if origin.strip()
+    ]
+    CORS_ORIGIN_REGEX: str | None = os.getenv(
+        "CORS_ORIGIN_REGEX",
+        r"^https?://.*" if "*" in CORS_ORIGINS else None
+    )
 
     # App
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
