@@ -22,12 +22,22 @@ interface Props {
   events: EventMarker[]
   focused: EventMarker | null
   onSelect: (e: EventMarker) => void
+  loading?: boolean
 }
 
-export function EventMap({ events, focused, onSelect }: Props) {
+export function EventMap({ events, focused, onSelect, loading }: Props) {
   return (
     <div>
-      <div className="map-wrap">
+      <div className="map-wrap" style={{ position: 'relative' }}>
+        {loading && (
+          <div className="map-loading-overlay" aria-live="polite">
+            <div className="map-radar-mini">
+              <div className="mini-pulse" />
+              <div className="mini-core" />
+            </div>
+            <span>Scanning India weather telemetry…</span>
+          </div>
+        )}
         <MapContainer
           center={INDIA_CENTER}
           zoom={INDIA_ZOOM}

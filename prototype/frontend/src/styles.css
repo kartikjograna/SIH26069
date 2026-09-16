@@ -1369,6 +1369,263 @@ tr.row-selected td {
   }
 }
 
+/* ---------------------------- Skeleton Loaders --------------------------- */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-bar {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--hover-wash) 25%,
+    color-mix(in srgb, var(--border) 60%, var(--hover-wash)) 50%,
+    var(--hover-wash) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+.tile.skeleton {
+  pointer-events: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 86px;
+}
+
+.skeleton-bar.label {
+  width: 65%;
+  height: 12px;
+  margin-bottom: 8px;
+}
+
+.skeleton-bar.value {
+  width: 50%;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+.skeleton-bar.value.hero {
+  height: 28px;
+  width: 65%;
+}
+
+.skeleton-bar.sub {
+  width: 80%;
+  height: 10px;
+  margin-top: 6px;
+}
+
+.event-skeleton-item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--page);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.event-skeleton-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-skeleton-line {
+  height: 11px;
+}
+
+.event-skeleton-line.w-40 {
+  width: 40%;
+}
+
+.event-skeleton-line.w-20 {
+  width: 20%;
+}
+
+.event-skeleton-line.w-90 {
+  width: 90%;
+}
+
+.event-skeleton-line.w-70 {
+  width: 70%;
+}
+
+.event-skeleton-line.badge-pill {
+  width: 52px;
+  height: 16px;
+  border-radius: 999px;
+}
+
+.event-skeleton-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* -------------------------- Map Radar Scan Overlay ------------------------ */
+
+.map-loading-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--backdrop-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  pointer-events: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.map-radar-mini {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-radar-mini .mini-core {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  z-index: 1;
+}
+
+.map-radar-mini .mini-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  animation: radar-pulse 1.8s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+
+/* ----------------------- Cold Start Status Banner ------------------------- */
+
+.cold-start-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+  animation: fadeIn 0.4s ease;
+}
+
+.cold-start-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------- Connecting Stages & Progressive Hints ------------------- */
+
+.connecting-stages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.connecting-stage-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: color 0.3s ease;
+}
+
+.connecting-stage-item .stage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gridline);
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.connecting-stage-item.done {
+  color: var(--status-good);
+}
+
+.connecting-stage-item.done .stage-dot {
+  background: var(--status-good);
+}
+
+.connecting-stage-item.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.connecting-stage-item.active .stage-dot {
+  background: var(--accent);
+  transform: scale(1.3);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.connecting-tip {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--hover-wash);
+  border: 1px solid var(--border);
+  display: inline-block;
+  animation: fadeIn 0.4s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .radar-ring {
     animation: none;
@@ -1381,6 +1638,12 @@ tr.row-selected td {
   .connecting-overlay,
   .connecting-card {
     transition: opacity 0.15s ease, visibility 0.15s ease;
+  }
+  .skeleton-bar {
+    animation: none;
+  }
+  .cold-start-spinner {
+    animation: none;
   }
 }
 

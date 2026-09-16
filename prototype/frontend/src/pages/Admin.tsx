@@ -93,14 +93,24 @@ export function Admin() {
           label="Awaiting review"
           value={queue.length}
           swatch={STATUS.manual_review.color}
+          loading={loading && queue.length === 0 && sources.length === 0}
           hero
         />
-        <StatTile label="Known sources" value={sources.length} />
+        <StatTile
+          label="Known sources"
+          value={sources.length}
+          loading={loading && queue.length === 0 && sources.length === 0}
+        />
         <StatTile
           label="Mean source credibility"
           value={`${(avgCredibility * 100).toFixed(0)}%`}
+          loading={loading && queue.length === 0 && sources.length === 0}
         />
-        <StatTile label="Reports attributed" value={totalReports} />
+        <StatTile
+          label="Reports attributed"
+          value={totalReports}
+          loading={loading && queue.length === 0 && sources.length === 0}
+        />
       </div>
 
       <div className="admin-tabs">

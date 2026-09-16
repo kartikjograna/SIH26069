@@ -19,9 +19,32 @@ interface Props {
   selectedId?: number
   onSelect: (e: EventMarker) => void
   emptyNote?: string
+  loading?: boolean
 }
 
-export function EventList({ events, selectedId, onSelect, emptyNote }: Props) {
+export function EventList({ events, selectedId, onSelect, emptyNote, loading }: Props) {
+  if (loading && events.length === 0) {
+    return (
+      <div className="event-list" aria-busy="true" aria-label="Loading events">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div className="event-skeleton-item" key={i}>
+            <div className="event-skeleton-top">
+              <div className="skeleton-bar event-skeleton-line w-40" />
+              <div className="skeleton-bar event-skeleton-line w-20" />
+            </div>
+            <div className="skeleton-bar event-skeleton-line w-90" style={{ marginTop: 4 }} />
+            <div className="skeleton-bar event-skeleton-line w-70" />
+            <div className="event-skeleton-meta">
+              <div className="skeleton-bar event-skeleton-line badge-pill" />
+              <div className="skeleton-bar event-skeleton-line badge-pill" />
+              <div className="skeleton-bar event-skeleton-line badge-pill" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   if (events.length === 0) {
     return <div className="empty">{emptyNote ?? 'No events match these filters'}</div>
   }

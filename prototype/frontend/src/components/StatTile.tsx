@@ -9,9 +9,21 @@ interface TileProps {
   swatch?: string
   /** Exactly one hero per view. */
   hero?: boolean
+  /** Whether the tile is currently waiting for initial data */
+  loading?: boolean
 }
 
-export function StatTile({ label, value, sub, swatch, hero }: TileProps) {
+export function StatTile({ label, value, sub, swatch, hero, loading }: TileProps) {
+  if (loading) {
+    return (
+      <div className={`tile skeleton ${hero ? 'tile-hero' : ''}`} aria-busy="true">
+        <div className="skeleton-bar label" />
+        <div className={`skeleton-bar value ${hero ? 'hero' : ''}`} />
+        {sub !== undefined && <div className="skeleton-bar sub" />}
+      </div>
+    )
+  }
+
   return (
     <div className="tile">
       <div className="tile-label">

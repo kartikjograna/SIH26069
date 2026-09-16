@@ -37,6 +37,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
   const [selected, setSelected] = useState<EventMarker | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [slowColdStart, setSlowColdStart] = useState(false)
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
 
   const load = useCallback(async () => {
@@ -49,13 +50,22 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
       setError(err instanceof Error ? err.message : 'Failed to reach the backend')
     } finally {
       setLoading(false)
+      setSlowColdStart(false)
     }
   }, [filters])
 
   // Refetch when filters change.
   useEffect(() => {
     setLoading(true)
-    load()
+    const coldTimer = window.setTimeout(() => {
+      setSlowColdStart(true)
+    }, 3500)
+
+    load().finally(() => {
+      window.clearTimeout(coldTimer)
+    })
+
+    return () => window.clearTimeout(coldTimer)
   }, [load])
 
   // Refresh the aggregate stats periodically so the KPI row tracks ingestion.
@@ -140,13 +150,23 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
         </div>
       )}
 
+      {slowColdStart && loading && (
+        <div className="cold-start-banner" role="status" aria-live="polite">
+          <div className="cold-start-spinner" />
+          <span>
+            <strong>Spinning up cloud instance…</strong> Cloud servers take ~30–45 seconds to wake up from inactivity. Telemetry will render automatically once loaded.
+          </span>
+        </div>
+      )}
+
       {/* KPI row. Total events is the single hero figure for this view. */}
       <div className="kpi-row">
-        <StatTile label="Total events" value={stats?.total_events ?? 0} hero />
+        <StatTile label="Total events" value={stats?.total_events ?? 0} hero loading={loading && !stats} />
         <StatTile
           label="Verified"
           value={stats?.verified ?? 0}
           swatch={STATUS.verified.color}
+          loading={loading && !stats}
           sub={
             stats && stats.total_events > 0
               ? `${((stats.verified / stats.total_events) * 100).toFixed(0)}% of all events`
@@ -157,24 +177,28 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
           label="Manual review"
           value={stats?.manual_review ?? 0}
           swatch={STATUS.manual_review.color}
+          loading={loading && !stats}
           sub="awaiting an expert"
         />
         <StatTile
           label="Rejected"
           value={stats?.rejected ?? 0}
           swatch={STATUS.rejected.color}
+          loading={loading && !stats}
           sub="below confidence floor"
         />
         <StatTile
           label="Fake news caught"
           value={stats?.fake_news_detected ?? 0}
+          loading={loading && !stats}
           sub="fake-news score > 0.5"
         />
-        <StatTile label="Duplicates removed" value={stats?.duplicates_removed ?? 0} />
-        <StatTile label="Events last hour" value={stats?.events_last_hour ?? 0} />
+        <StatTile label="Duplicates removed" value={stats?.duplicates_removed ?? 0} loading={loading && !stats} />
+        <StatTile label="Events last hour" value={stats?.events_last_hour ?? 0} loading={loading && !stats} />
         <StatTile
           label="Mean confidence"
           value={`${((stats?.avg_confidence ?? 0) * 100).toFixed(1)}%`}
+          loading={loading && !stats}
         />
       </div>
 
@@ -206,10 +230,15 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
             <div className="card-head">
               <span className="card-title">Event map — India</span>
               <span className="card-note">
-                {loading ? 'loading…' : `${markers.length} events plotted`}
+                {loading && markers.length === 0 ? 'loading…' : `${markers.length} events plotted`}
               </span>
             </div>
-            <EventMap events={markers} focused={selected} onSelect={setSelected} />
+            <EventMap
+              events={markers}
+              focused={selected}
+              onSelect={setSelected}
+              loading={true}
+            />
           </div>
 
           <div className="card">
@@ -259,6 +288,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
               events={markers}
               selectedId={selected?.id}
               onSelect={setSelected}
+              loading={loading && markers.length === 0}
               emptyNote={loading ? 'Loading events…' : 'No events match these filters'}
             />
           </div>
