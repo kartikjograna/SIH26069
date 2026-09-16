@@ -25,6 +25,7 @@
   --radius: 8px;
   --radius-sm: 5px;
   --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --backdrop-overlay: rgba(249, 249, 247, 0.75);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -40,6 +41,7 @@
     --border: rgba(255, 255, 255, 0.1);
     --hover-wash: rgba(255, 255, 255, 0.06);
     --accent: #3987e5;
+    --backdrop-overlay: rgba(13, 13, 13, 0.78);
   }
 }
 
@@ -55,6 +57,7 @@
   --border: rgba(255, 255, 255, 0.1);
   --hover-wash: rgba(255, 255, 255, 0.06);
   --accent: #3987e5;
+  --backdrop-overlay: rgba(13, 13, 13, 0.78);
 }
 
 /* ========================================================================== */
@@ -1212,3 +1215,172 @@ tr.row-selected td {
   white-space: nowrap;
   border: 0;
 }
+
+/* ------------------------ Connecting Blur Overlay ------------------------- */
+
+.connecting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--backdrop-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.connecting-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.connecting-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 28px;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: scale(1);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.connecting-overlay.hidden .connecting-card {
+  transform: scale(0.95);
+}
+
+.connecting-radar {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-core {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 0 14px var(--accent);
+}
+
+.radar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.radar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  animation: radar-pulse 2.2s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+
+.radar-ring-2 {
+  animation-delay: 0.9s;
+}
+
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.connecting-content {
+  width: 100%;
+}
+
+.connecting-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.connecting-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.connecting-status-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--gridline);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 20px;
+  position: relative;
+}
+
+.connecting-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 35%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: connecting-indeterminate 1.8s ease-in-out infinite;
+}
+
+@keyframes connecting-indeterminate {
+  0% {
+    left: -35%;
+    width: 30%;
+  }
+  50% {
+    left: 30%;
+    width: 55%;
+  }
+  100% {
+    left: 100%;
+    width: 30%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-ring {
+    animation: none;
+    opacity: 0.3;
+  }
+  .connecting-progress {
+    animation: none;
+    width: 100%;
+  }
+  .connecting-overlay,
+  .connecting-card {
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+  }
+}
+

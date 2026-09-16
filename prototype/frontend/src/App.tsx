@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard'
 import { Admin } from './pages/Admin'
 import { useLiveEvents } from './hooks/useLiveEvents'
+import { ConnectingOverlay } from './components/ConnectingOverlay'
 
 type Theme = 'light' | 'dark'
 
@@ -31,11 +32,10 @@ export function App() {
     }
   }, [theme])
 
-  const connLabel =
-    state === 'open' ? 'Live' : state === 'connecting' ? 'Connecting…' : 'Reconnecting…'
-
   return (
     <div className="app">
+      <ConnectingOverlay state={state} />
+
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark">Weather Analytics Platform</span>
@@ -52,14 +52,14 @@ export function App() {
         </nav>
 
         <div className="topbar-right">
-          <span
-            className={`live-dot ${state === 'open' ? 'on' : state === 'closed' ? 'off' : ''}`}
-          >
-            {connLabel}
-            {state === 'open' && count > 0 && (
-              <span className="muted live-count-text"> · {count.toLocaleString('en-IN')} streamed</span>
-            )}
-          </span>
+          {state === 'open' && (
+            <span className="live-dot on">
+              Live
+              {count > 0 && (
+                <span className="muted live-count-text"> · {count.toLocaleString('en-IN')} streamed</span>
+              )}
+            </span>
+          )}
           <button
             className="icon-btn"
             type="button"
