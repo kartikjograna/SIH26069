@@ -237,7 +237,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
               events={markers}
               focused={selected}
               onSelect={setSelected}
-              loading={true}
+              loading={loading && markers.length === 0}
             />
           </div>
 
