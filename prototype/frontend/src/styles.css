@@ -447,14 +447,14 @@ a {
     grid-template-columns: 1fr;
     gap: 14px;
   }
+  .dash-side-left {
+    order: 0;
+  }
   .dash-center {
     order: 1;
   }
   .dash-side-right {
     order: 2;
-  }
-  .dash-side-left {
-    order: 3;
   }
   .dash-side-left.collapsed {
     display: none;
@@ -468,11 +468,14 @@ a {
     background: var(--surface-1);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    font-family: inherit;
     font-weight: 500;
     font-size: 13px;
     color: var(--text-primary);
     cursor: pointer;
     margin-bottom: 12px;
+    touch-action: manipulation;
+    user-select: none;
   }
   .mobile-drawer-toggle:hover {
     background: var(--hover-wash);
