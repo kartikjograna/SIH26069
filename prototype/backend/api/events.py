@@ -1,9 +1,10 @@
 """Event API endpoints - listing, filtering, retrieval, citizen reports."""
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +17,17 @@ from ..ingestion.pipeline import get_pipeline
 from ..ingestion.mock_sources import RawEvent
 
 router = APIRouter(prefix="/api/events", tags=["events"])
+
+# Fast in-memory TTL cache for dashboard aggregate statistics
+_STATS_CACHE: Optional[StatsSchema] = None
+_STATS_CACHE_TIME: float = 0.0
+_STATS_CACHE_TTL: float = 3.0  # 3-second cache window
+
+
+def invalidate_stats_cache():
+    """Invalidate the in-memory stats cache when data changes."""
+    global _STATS_CACHE_TIME
+    _STATS_CACHE_TIME = 0.0
 
 
 @router.get("", response_model=List[WeatherEventSchema])
@@ -82,7 +94,6 @@ async def submit_citizen_report(
     report: CitizenReport, db: AsyncSession = Depends(get_db)
 ):
     """Submit a citizen weather report. Will go through full ML verification."""
-    from datetime import datetime
     raw = RawEvent(
         external_id=f"citizen-{datetime.utcnow().timestamp()}",
         source="citizen_report",
@@ -97,75 +108,80 @@ async def submit_citizen_report(
     )
     pipeline = get_pipeline()
     event = await pipeline.ingest_one(raw)
+    invalidate_stats_cache()
     return event
 
 
 @router.get("/stats/overview", response_model=StatsSchema)
 async def get_stats(db: AsyncSession = Depends(get_db)):
-    """Aggregate statistics for the dashboard."""
-    total = await db.scalar(select(func.count(WeatherEvent.id)))
-    verified = await db.scalar(
-        select(func.count(WeatherEvent.id)).where(WeatherEvent.verification_status == "verified")
-    )
-    manual_review = await db.scalar(
-        select(func.count(WeatherEvent.id)).where(WeatherEvent.verification_status == "manual_review")
-    )
-    rejected = await db.scalar(
-        select(func.count(WeatherEvent.id)).where(WeatherEvent.verification_status == "rejected")
-    )
-    duplicates = await db.scalar(
-        select(func.count(WeatherEvent.id)).where(WeatherEvent.is_duplicate == True)
-    )
-    fake_news = await db.scalar(
-        select(func.count(VerificationResult.id))
-        .join(WeatherEvent, WeatherEvent.id == VerificationResult.event_id)
-        .where(VerificationResult.fake_news_score > 0.5)
-    )
-    avg_conf = await db.scalar(select(func.avg(WeatherEvent.confidence_score))) or 0.0
+    """Aggregate statistics for the dashboard with in-memory TTL caching and consolidated queries."""
+    global _STATS_CACHE, _STATS_CACHE_TIME
 
-    from datetime import timedelta
+    now = time.time()
+    if _STATS_CACHE is not None and (now - _STATS_CACHE_TIME) < _STATS_CACHE_TTL:
+        return _STATS_CACHE
+
     one_hour_ago = datetime.utcnow() - timedelta(hours=1)
     one_day_ago = datetime.utcnow() - timedelta(hours=24)
-    last_hour = await db.scalar(
-        select(func.count(WeatherEvent.id)).where(WeatherEvent.ingested_at >= one_hour_ago)
-    )
-    last_24h = await db.scalar(
-        select(func.count(WeatherEvent.id)).where(WeatherEvent.ingested_at >= one_day_ago)
-    )
 
-    # Group by category from JSON
-    all_events = await db.execute(
-        select(WeatherEvent.predicted_categories).where(WeatherEvent.predicted_categories.isnot(None))
+    # 1. Consolidated single-pass aggregation query for WeatherEvent counts and averages
+    agg_stmt = select(
+        func.count(WeatherEvent.id).label("total"),
+        func.coalesce(func.sum(case((WeatherEvent.verification_status == "verified", 1), else_=0)), 0).label("verified"),
+        func.coalesce(func.sum(case((WeatherEvent.verification_status == "manual_review", 1), else_=0)), 0).label("manual_review"),
+        func.coalesce(func.sum(case((WeatherEvent.verification_status == "rejected", 1), else_=0)), 0).label("rejected"),
+        func.coalesce(func.sum(case((WeatherEvent.is_duplicate == True, 1), else_=0)), 0).label("duplicates"),
+        func.coalesce(func.sum(case((WeatherEvent.ingested_at >= one_hour_ago, 1), else_=0)), 0).label("last_hour"),
+        func.coalesce(func.sum(case((WeatherEvent.ingested_at >= one_day_ago, 1), else_=0)), 0).label("last_24h"),
+        func.coalesce(func.avg(WeatherEvent.confidence_score), 0.0).label("avg_conf"),
     )
-    by_category: dict[str, int] = {}
-    for (cats,) in all_events.all():
-        if isinstance(cats, dict) and cats:  # Check if dict is not empty
-            top_cat = max(cats, key=cats.get) if cats else "general"
-            by_category[top_cat] = by_category.get(top_cat, 0) + 1
+    agg_res = await db.execute(agg_stmt)
+    agg_row = agg_res.one()
 
-    # Group by source
+    # 2. Fake news detected count
+    fake_news_stmt = select(func.count(VerificationResult.id)).where(VerificationResult.fake_news_score > 0.5)
+    fake_news = (await db.scalar(fake_news_stmt)) or 0
+
+    # 3. Group by source
     src_rows = await db.execute(
         select(WeatherEvent.source, func.count(WeatherEvent.id)).group_by(WeatherEvent.source)
     )
-    by_source = {src: cnt for src, cnt in src_rows.all()}
+    by_source = {src: int(cnt) for src, cnt in src_rows.all() if src}
 
-    # Group by state
+    # 4. Group by state
     st_rows = await db.execute(
         select(WeatherEvent.state, func.count(WeatherEvent.id)).group_by(WeatherEvent.state)
     )
-    by_state = {st: cnt for st, cnt in st_rows.all()}
+    by_state = {st: int(cnt) for st, cnt in st_rows.all() if st}
 
-    return StatsSchema(
-        total_events=total or 0,
-        verified=verified or 0,
-        manual_review=manual_review or 0,
-        rejected=rejected or 0,
-        duplicates_removed=duplicates or 0,
-        fake_news_detected=fake_news or 0,
-        events_last_hour=last_hour or 0,
-        events_last_24h=last_24h or 0,
-        avg_confidence=round(avg_conf, 4),
+    # 5. Group by category from JSON (latest sample up to 1000 events for ultra-fast aggregation)
+    all_events = await db.execute(
+        select(WeatherEvent.predicted_categories)
+        .where(WeatherEvent.predicted_categories.isnot(None))
+        .order_by(WeatherEvent.id.desc())
+        .limit(1000)
+    )
+    by_category: dict[str, int] = {}
+    for (cats,) in all_events.all():
+        if isinstance(cats, dict) and cats:
+            top_cat = max(cats, key=cats.get) if cats else "general"
+            by_category[top_cat] = by_category.get(top_cat, 0) + 1
+
+    stats = StatsSchema(
+        total_events=int(agg_row.total or 0),
+        verified=int(agg_row.verified or 0),
+        manual_review=int(agg_row.manual_review or 0),
+        rejected=int(agg_row.rejected or 0),
+        duplicates_removed=int(agg_row.duplicates or 0),
+        fake_news_detected=int(fake_news or 0),
+        events_last_hour=int(agg_row.last_hour or 0),
+        events_last_24h=int(agg_row.last_24h or 0),
+        avg_confidence=round(float(agg_row.avg_conf or 0.0), 4),
         by_category=by_category,
         by_source=by_source,
         by_state=by_state,
     )
+
+    _STATS_CACHE = stats
+    _STATS_CACHE_TIME = time.time()
+    return stats

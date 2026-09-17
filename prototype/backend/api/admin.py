@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from ..database import get_db
 from ..models import WeatherEvent, VerificationResult, SourceCredibility
 from ..schemas import ManualReviewAction, WeatherEventSchema, SourceCredibilitySchema
+from .events import invalidate_stats_cache
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -44,6 +45,7 @@ async def review_action(action: ManualReviewAction, db: AsyncSession = Depends(g
     if result.rowcount == 0:
         raise HTTPException(404, "Event not found")
     await db.commit()
+    invalidate_stats_cache()
     return {"event_id": action.event_id, "new_status": new_status, "notes": action.notes}
 
 
