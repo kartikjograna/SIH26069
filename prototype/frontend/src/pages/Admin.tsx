@@ -10,16 +10,23 @@ import { timeAgo } from '../components/EventList'
 
 type Tab = 'queue' | 'sources' | 'recent'
 
+// In-memory module cache to prevent skeleton flickers during route navigation (stale-while-revalidate)
+let cachedQueue: WeatherEvent[] | null = null
+let cachedSources: SourceCredibility[] | null = null
+let cachedRecent: WeatherEvent[] | null = null
+
 export function Admin() {
   const [tab, setTab] = useState<Tab>('queue')
-  const [queue, setQueue] = useState<WeatherEvent[]>([])
-  const [sources, setSources] = useState<SourceCredibility[]>([])
-  const [recent, setRecent] = useState<WeatherEvent[]>([])
+  const hasCache = cachedQueue !== null && cachedSources !== null && cachedRecent !== null
+
+  const [queue, setQueue] = useState<WeatherEvent[]>(cachedQueue ?? [])
+  const [sources, setSources] = useState<SourceCredibility[]>(cachedSources ?? [])
+  const [recent, setRecent] = useState<WeatherEvent[]>(cachedRecent ?? [])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!hasCache)
 
   const load = useCallback(async () => {
     try {
@@ -28,6 +35,9 @@ export function Admin() {
         api.sources(),
         api.recentEvents(60),
       ])
+      cachedQueue = q
+      cachedSources = s
+      cachedRecent = r
       setQueue(q)
       setSources(s)
       setRecent(r)
@@ -51,7 +61,11 @@ export function Admin() {
     try {
       const res = await api.reviewAction(eventId, action)
       // Drop it from the queue immediately; the poll will reconcile.
-      setQueue((prev) => prev.filter((e) => e.id !== eventId))
+      setQueue((prev) => {
+        const next = prev.filter((e) => e.id !== eventId)
+        cachedQueue = next
+        return next
+      })
       if (selectedId === eventId) setSelectedId(null)
       setNotice(`Event #${eventId} marked ${res.new_status}.`)
       window.setTimeout(() => setNotice(null), 4000)

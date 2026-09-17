@@ -14,6 +14,11 @@ import { CitizenReportForm } from '../components/CitizenReportForm'
 
 const DEFAULT_FILTERS: EventFilters = { limit: 200 }
 
+// In-memory module cache to prevent skeleton flickers during route navigation (stale-while-revalidate)
+let cachedStats: Stats | null = null
+let cachedFetched: WeatherEvent[] | null = null
+let cachedFilterKey: string = JSON.stringify(DEFAULT_FILTERS)
+
 /** Does a live event satisfy the currently-applied filters? */
 function matchesFilters(e: LiveEvent, f: EventFilters): boolean {
   if (f.status && e.verification_status !== f.status) return false
@@ -32,17 +37,23 @@ interface Props {
 
 export function Dashboard({ liveEvents, liveCount }: Props) {
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS)
-  const [fetched, setFetched] = useState<WeatherEvent[]>([])
-  const [stats, setStats] = useState<Stats | null>(null)
+  const filterKey = JSON.stringify(filters)
+  const hasCache = cachedStats !== null && cachedFetched !== null && cachedFilterKey === filterKey
+
+  const [fetched, setFetched] = useState<WeatherEvent[]>(hasCache && cachedFetched ? cachedFetched : [])
+  const [stats, setStats] = useState<Stats | null>(cachedStats)
   const [selected, setSelected] = useState<EventMarker | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!hasCache)
   const [slowColdStart, setSlowColdStart] = useState(false)
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
 
   const load = useCallback(async () => {
     try {
       const [events, s] = await Promise.all([api.listEvents(filters), api.stats()])
+      cachedFetched = events
+      cachedStats = s
+      cachedFilterKey = JSON.stringify(filters)
       setFetched(events)
       setStats(s)
       setError(null)
@@ -56,7 +67,10 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
 
   // Refetch when filters change.
   useEffect(() => {
-    setLoading(true)
+    const currentKey = JSON.stringify(filters)
+    if (cachedFilterKey !== currentKey || !cachedStats) {
+      setLoading(true)
+    }
     const coldTimer = window.setTimeout(() => {
       setSlowColdStart(true)
     }, 3500)
@@ -66,12 +80,15 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
     })
 
     return () => window.clearTimeout(coldTimer)
-  }, [load])
+  }, [load, filters])
 
   // Refresh the aggregate stats periodically so the KPI row tracks ingestion.
   useEffect(() => {
     const id = window.setInterval(() => {
-      api.stats().then(setStats).catch(() => {})
+      api.stats().then((s) => {
+        cachedStats = s
+        setStats(s)
+      }).catch(() => {})
     }, 5000)
     return () => window.clearInterval(id)
   }, [])
