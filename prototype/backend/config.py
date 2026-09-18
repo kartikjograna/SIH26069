@@ -8,60 +8,81 @@ load_dotenv(ROOT_DIR / ".env")
 
 
 class Settings:
-    # Database
-    _db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/weather.db")
-    # Render provides postgresql:// but we need postgresql+asyncpg:// for async
-    DATABASE_URL: str = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    def __init__(self):
+        # Process DATABASE_URL for asyncpg compatibility with Neon
+        _db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/weather.db")
 
-    # CORS
-    _cors_env = os.getenv("CORS_ORIGINS", "*")
-    CORS_ORIGINS: list[str] = [
-        origin.strip() for origin in _cors_env.split(",") if origin.strip()
-    ]
-    CORS_ORIGIN_REGEX: str | None = os.getenv(
-        "CORS_ORIGIN_REGEX",
-        r"^https?://.*" if "*" in CORS_ORIGINS else None
-    )
+        if _db_url.startswith("postgresql"):
+            from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+            parsed = urlparse(_db_url)
+            # Remove sslmode query parameter (asyncpg doesn't recognize it)
+            query_dict = parse_qs(parsed.query, keep_blank_values=True)
+            query_dict.pop('sslmode', None)
+            # Rebuild query string without sslmode
+            new_query = urlencode(query_dict, doseq=True)
+            # Convert to asyncpg driver (ensures we use the asyncpg dialect)
+            self.DATABASE_URL = urlunparse(parsed._replace(
+                scheme="postgresql+asyncpg",
+                query=new_query
+            ))
+            # SSL is required for Neon connections
+            self.CONNECT_ARGS = {"ssl": True}
+        else:
+            # SQLite or other databases
+            self.DATABASE_URL = _db_url
+            self.CONNECT_ARGS = {}
 
-    # App
-    APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
-    # Render uses PORT, but allow APP_PORT override for local dev
-    APP_PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
-    DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
-    # Kept separate from DEBUG on purpose: echoing every statement is ~6k log
-    # lines/minute under continuous ingestion, which buries real errors.
-    SQL_ECHO: bool = os.getenv("SQL_ECHO", "false").lower() == "true"
-    # Off by default, and deliberately NOT tied to DEBUG. This service owns a
-    # stateful ingestion task and live WebSocket clients: an in-place reload
-    # restarts ingestion and drops every connected dashboard. (On Windows the
-    # reload also wedges — the child keeps serving and is never replaced.)
-    RELOAD: bool = os.getenv("RELOAD", "false").lower() == "true"
+        # CORS
+        _cors_env = os.getenv("CORS_ORIGINS", "*")
+        self.CORS_ORIGINS: list[str] = [
+            origin.strip() for origin in _cors_env.split(",") if origin.strip()
+        ]
+        self.CORS_ORIGIN_REGEX: str | None = os.getenv(
+            "CORS_ORIGIN_REGEX",
+            r"^https?://.*" if "*" in self.CORS_ORIGINS else None
+        )
 
-    # ML
-    USE_MOCK_MODELS: bool = os.getenv("USE_MOCK_MODELS", "true").lower() == "true"
-    CONFIDENCE_THRESHOLD_HIGH: float = float(os.getenv("CONFIDENCE_THRESHOLD_HIGH", "0.85"))
-    CONFIDENCE_THRESHOLD_MEDIUM: float = float(os.getenv("CONFIDENCE_THRESHOLD_MEDIUM", "0.60"))
+        # App
+        self.APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
+        # Render uses PORT, but allow APP_PORT override for local dev
+        self.APP_PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
+        self.DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+        # Kept separate from DEBUG on purpose: echoing every statement is ~6k log
+        # lines/minute under continuous ingestion, which buries real errors.
+        self.SQL_ECHO: bool = os.getenv("SQL_ECHO", "false").lower() == "true"
+        # Off by default, and deliberately NOT tied to DEBUG. This service owns a
+        # stateful ingestion task and live WebSocket clients: an in-place reload
+        # restarts ingestion and drops every connected dashboard. (On Windows the
+        # reload also wedges — the child keeps serving and is never replaced.)
+        self.RELOAD: bool = os.getenv("RELOAD", "false").lower() == "true"
 
-    # Paths
-    ROOT_DIR: Path = ROOT_DIR
-    DATA_DIR: Path = ROOT_DIR / "data"
-    MODELS_DIR: Path = ROOT_DIR / "models"
+        # ML
+        self.USE_MOCK_MODELS: bool = os.getenv("USE_MOCK_MODELS", "true").lower() == "true"
+        self.CONFIDENCE_THRESHOLD_HIGH: float = float(os.getenv("CONFIDENCE_THRESHOLD_HIGH", "0.85"))
+        self.CONFIDENCE_THRESHOLD_MEDIUM: float = float(os.getenv("CONFIDENCE_THRESHOLD_MEDIUM", "0.60"))
 
-    # Event categories
-    EVENT_CATEGORIES = [
-        "rainfall",
-        "thunderstorm",
-        "flooding",
-        "heatwave",
-        "fog",
-        "dust_storm",
-        "strong_wind",
-        "snowfall",
-        "hailstorm",
-        "cyclone",
-    ]
+        # Paths
+        self.ROOT_DIR: Path = ROOT_DIR
+        self.DATA_DIR: Path = ROOT_DIR / "data"
+        self.MODELS_DIR: Path = ROOT_DIR / "models"
+
+        # Event categories
+        self.EVENT_CATEGORIES = [
+            "rainfall",
+            "thunderstorm",
+            "flooding",
+            "heatwave",
+            "fog",
+            "dust_storm",
+            "strong_wind",
+            "snowfall",
+            "hailstorm",
+            "cyclone",
+        ]
+
+        # Create directories
+        self.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        self.MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 settings = Settings()
-settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
-settings.MODELS_DIR.mkdir(parents=True, exist_ok=True)
