@@ -9,24 +9,43 @@ load_dotenv(ROOT_DIR / ".env")
 
 class Settings:
     def __init__(self):
-        # Process DATABASE_URL for asyncpg compatibility with Neon
+        # Process DATABASE_URL for asyncpg compatibility (e.g. Neon, Render, Supabase)
         _db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/weather.db")
 
-        if _db_url.startswith("postgresql"):
+        if _db_url.startswith(("postgresql://", "postgres://", "postgresql+asyncpg://", "postgresql+psycopg2://")):
             from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
             parsed = urlparse(_db_url)
-            # Remove sslmode query parameter (asyncpg doesn't recognize it)
             query_dict = parse_qs(parsed.query, keep_blank_values=True)
-            query_dict.pop('sslmode', None)
-            # Rebuild query string without sslmode
-            new_query = urlencode(query_dict, doseq=True)
-            # Convert to asyncpg driver (ensures we use the asyncpg dialect)
+
+            # Determine SSL configuration
+            sslmode = query_dict.get("sslmode", [None])[0]
+            ssl_param = query_dict.get("ssl", [None])[0]
+            is_localhost = parsed.hostname in ("localhost", "127.0.0.1", None)
+
+            self.CONNECT_ARGS = {}
+            if sslmode == "disable" or ssl_param in ("false", "0", "disable"):
+                pass
+            elif sslmode in ("require", "verify-ca", "verify-full", "prefer") or ssl_param in ("true", "1", "require") or not is_localhost:
+                self.CONNECT_ARGS = {"ssl": True}
+
+            # Filter query parameters: asyncpg does not accept libpq parameters like
+            # channel_binding, sslmode, options, target_session_attrs, etc.
+            valid_asyncpg_params = {
+                "timeout",
+                "command_timeout",
+                "statement_cache_size",
+                "max_cached_statement_lifetime",
+                "max_cacheable_statement_size",
+                "server_settings",
+            }
+            filtered_query = {k: v for k, v in query_dict.items() if k in valid_asyncpg_params}
+            new_query = urlencode(filtered_query, doseq=True)
+
+            # Convert to asyncpg driver scheme
             self.DATABASE_URL = urlunparse(parsed._replace(
                 scheme="postgresql+asyncpg",
                 query=new_query
             ))
-            # SSL is required for Neon connections
-            self.CONNECT_ARGS = {"ssl": True}
         else:
             # SQLite or other databases
             self.DATABASE_URL = _db_url
