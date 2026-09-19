@@ -167,7 +167,7 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
         </div>
       )}
 
-      {slowColdStart && loading && (
+      {slowColdStart && (
         <div className="cold-start-banner" role="status" aria-live="polite">
           <div className="cold-start-spinner" />
           <span>
