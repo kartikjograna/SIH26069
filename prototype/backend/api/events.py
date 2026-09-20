@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, and_, case
+from sqlalchemy import select, func, and_, case, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -63,9 +63,7 @@ async def list_events(
     if min_confidence is not None:
         conditions.append(WeatherEvent.confidence_score >= min_confidence)
     if category:
-        # JSON filter via LIKE on predicted_categories
-        conditions.append(WeatherEvent.predicted_categories.like(f'%"{category}"%'))
-
+        conditions.append(cast(WeatherEvent.predicted_categories, String).like(f'%"{category}"%'))
     if conditions:
         stmt = stmt.where(and_(*conditions))
 
