@@ -89,6 +89,7 @@ FACEBOOK_CITIZEN_TEMPLATES = [
     "It's getting really hot in {city}. 44 degrees and counting. Stay safe guys! #SummerHeat",
 ]
 
+IMD_TEMPLATES = [
     "IMD update: Heavy to very heavy rainfall expected over {city} district in next 24 hours. #IMD #WeatherAlert",
     "IMD bulletin: Temperature in {city} likely to touch 45°C today. Heatwave warning issued. #IMD",
     "IMD: Cyclonic circulation observed off the coast near {city}. Fishermen advised not to venture into sea. #IMD",
