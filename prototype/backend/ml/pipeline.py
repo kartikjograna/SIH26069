@@ -65,7 +65,7 @@ def fake_news_score(text: str) -> Tuple[float, str]:
         score += 0.15  # very short posts are usually less reliable
 
     # Trust signals reduce score
-    if any(w in lower for w in ["according to", "official", "reported by", "imd", "met department"]):
+    if any(w in lower for w in ["according to", "official", "reported by", "imd", "met department", "ndma"]):
         score -= 0.3
     if re.search(r"https?://", lower):
         score -= 0.1
@@ -182,9 +182,9 @@ SOURCE_BASE_SCORES: Dict[str, float] = {
     "news_toi": 0.82,
     "news_hindustan": 0.80,
     "twitter_verified": 0.65,
-    "twitter_citizen": 0.55,
-    "facebook_citizen": 0.50,
-    "citizen_report": 0.60,
+    "twitter_citizen": 0.65,
+    "facebook_citizen": 0.65,
+    "citizen_report": 0.70,
 }
 
 
