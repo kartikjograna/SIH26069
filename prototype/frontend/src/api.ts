@@ -20,9 +20,14 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (!(init?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers: { ...headers, ...init?.headers },
   })
   if (!res.ok) {
     // FastAPI reports errors as {detail: ...}; fall back to the status text.
@@ -57,11 +62,25 @@ export const api = {
 
   stats: () => request<Stats>('/api/events/stats/overview'),
 
-  submitCitizenReport: (report: CitizenReportInput) =>
-    request<WeatherEvent>('/api/events/citizen-report', {
+  submitCitizenReport: (report: CitizenReportInput, imageFile?: File) => {
+    if (imageFile) {
+      const formData = new FormData()
+      for (const [key, value] of Object.entries(report)) {
+        if (value !== undefined && value !== null) {
+          formData.append(key, String(value))
+        }
+      }
+      formData.append('image', imageFile)
+      return request<WeatherEvent>('/api/events/citizen-report', {
+        method: 'POST',
+        body: formData,
+      })
+    }
+    return request<WeatherEvent>('/api/events/citizen-report', {
       method: 'POST',
       body: JSON.stringify(report),
-    }),
+    })
+  },
 
   reviewQueue: (limit = 50) =>
     request<WeatherEvent[]>(`/api/admin/review-queue?limit=${limit}`),

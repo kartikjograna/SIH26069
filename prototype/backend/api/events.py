@@ -3,7 +3,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, File, Form, UploadFile
 from sqlalchemy import select, func, and_, case, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -89,20 +89,40 @@ async def get_event(event_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/citizen-report", response_model=WeatherEventSchema)
 async def submit_citizen_report(
-    report: CitizenReport, db: AsyncSession = Depends(get_db)
+    text: str = Form(...),
+    city: str = Form(...),
+    state: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    event_time: Optional[datetime] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    db: AsyncSession = Depends(get_db),
 ):
     """Submit a citizen weather report. Will go through full ML verification."""
+    import os
+    from uuid import uuid4
+
+    image_url = None
+    if image:
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        filename = f"{uuid4().hex}_{image.filename}"
+        filepath = os.path.join(upload_dir, filename)
+        with open(filepath, "wb") as buffer:
+            buffer.write(await image.read())
+        image_url = f"/uploads/{filename}"
+
     raw = RawEvent(
         external_id=f"citizen-{datetime.utcnow().timestamp()}",
         source="citizen_report",
-        text=report.text,
-        city=report.city,
-        state=report.state,
-        latitude=report.latitude,
-        longitude=report.longitude,
-        has_image=report.has_image,
-        image_url=report.image_url,
-        event_time=report.event_time or datetime.utcnow(),
+        text=text,
+        city=city,
+        state=state,
+        latitude=latitude,
+        longitude=longitude,
+        has_image=image is not None,
+        image_url=image_url,
+        event_time=event_time or datetime.utcnow(),
     )
     pipeline = get_pipeline()
     event = await pipeline.ingest_one(raw)

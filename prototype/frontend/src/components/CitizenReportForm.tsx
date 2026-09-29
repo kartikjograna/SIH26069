@@ -20,6 +20,7 @@ export function CitizenReportForm({ onSubmitted }: { onSubmitted?: () => void })
   const [city, setCity] = useState('Mumbai')
   const [text, setText] = useState('')
   const [hasImage, setHasImage] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<WeatherEvent | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,11 +40,11 @@ export function CitizenReportForm({ onSubmitted }: { onSubmitted?: () => void })
         latitude: preset.lat,
         longitude: preset.lon,
         has_image: hasImage,
-        image_url: hasImage ? `https://example.org/citizen/${Date.now()}.jpg` : null,
-      })
+      }, imageFile)
       setResult(created)
       setText('')
       setHasImage(false)
+      setImageFile(null)
       onSubmitted?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submission failed')
@@ -108,13 +109,35 @@ export function CitizenReportForm({ onSubmitted }: { onSubmitted?: () => void })
           <input
             type="checkbox"
             checked={hasImage}
-            onChange={(e) => setHasImage(e.target.checked)}
+            onChange={(e) => {
+              setHasImage(e.target.checked)
+              if (!e.target.checked) setImageFile(null)
+            }}
             style={{ width: 'auto' }}
           />
           <span className="field-label" style={{ margin: 0 }}>
             Attach a photo (runs image forensics)
           </span>
         </label>
+
+        {hasImage && (
+          <label className="field">
+            <span className="field-label">Select Image</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setImageFile(file)
+              }}
+            />
+            {imageFile && (
+              <div style={{ fontSize: '0.8rem', color: '#666', marginTop: 4 }}>
+                Selected: {imageFile.name}
+              </div>
+            )}
+          </label>
+        )}
 
         <button className="btn btn-primary" type="submit" disabled={busy || !text.trim()}>
           {busy ? 'Verifying…' : 'Submit report'}
