@@ -78,7 +78,7 @@ export function categoryLabel(key: string): string {
 /** Human-readable labels for source keys. */
 export const SOURCE_LABELS: Record<string, string> = {
   imd_official: 'IMD (official)',
-  ndma: 'NDMA',
+  ndma_official: 'NDMA',
   news_reuters: 'Reuters',
   news_toi: 'Times of India',
   news_hindustan: 'Hindustan Times',
