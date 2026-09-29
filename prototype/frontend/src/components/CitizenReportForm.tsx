@@ -40,7 +40,7 @@ export function CitizenReportForm({ onSubmitted }: { onSubmitted?: () => void })
         latitude: preset.lat,
         longitude: preset.lon,
         has_image: hasImage,
-      }, imageFile)
+      }, imageFile ?? undefined)
       setResult(created)
       setText('')
       setHasImage(false)
