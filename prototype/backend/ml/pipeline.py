@@ -177,14 +177,14 @@ def compute_duplicate_hash(text: str) -> str:
 # Real production: XGBoost ensemble. Here: lookup + small adjustment.
 SOURCE_BASE_SCORES: Dict[str, float] = {
     "imd_official": 0.98,
-    "ndma": 0.95,
+    "ndma_official": 0.95,
     "news_reuters": 0.90,
     "news_toi": 0.82,
     "news_hindustan": 0.80,
     "twitter_verified": 0.65,
-    "twitter_citizen": 0.45,
-    "facebook_citizen": 0.40,
-    "citizen_report": 0.50,
+    "twitter_citizen": 0.55,
+    "facebook_citizen": 0.50,
+    "citizen_report": 0.60,
 }
 
 
@@ -224,8 +224,8 @@ class VerificationPipeline:
         # Start from source credibility, penalize for fake-news / manipulation,
         # boost for high source + clean image.
         base = out.source_credibility_score
-        fake_penalty = out.fake_news_score * 0.5
-        image_penalty = out.image_forensics_score * 0.2 if has_image else 0.0
+        fake_penalty = out.fake_news_score * 0.3
+        image_penalty = out.image_forensics_score * 0.1 if has_image else 0.0
 
         classification_strength = max(out.event_classification.values()) if out.event_classification else 0.0
         classification_bonus = classification_strength * 0.15
