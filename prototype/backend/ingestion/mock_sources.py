@@ -73,9 +73,22 @@ CITIES: List[City] = [
 ]
 
 
-# ---------- Source-specific templates ----------
+NDMA_TEMPLATES = [
+    "NDMA Alert: High risk of flash floods in {city} district. Residents advised to move to higher ground. #NDMA #FloodAlert",
+    "NDMA warning: Landslide risk increased in {city} hilly areas due to continuous rain. #NDMA #Landslide",
+    "NDMA: Heatwave alert for {city} - avoid outdoors between 12pm and 4pm. #NDMA #Heatwave",
+    "NDMA: Cyclone warning issued for {city} coast. Evacuation plans initiated. #NDMA #CycloneAlert",
+    "NDMA update: Flood relief camps established in {city} for displaced residents. #NDMA #Relief",
+]
 
-IMD_TEMPLATES = [
+FACEBOOK_CITIZEN_TEMPLATES = [
+    "My colony in {city} is completely underwater! We need help. #Flood {city}",
+    "Unbelievable rain in {city} today. The main road is like a river. #RainyDay #Waterlogging",
+    "Can anyone confirm if the airport in {city} is still open? Visibility is zero here. #Fog #Travel",
+    "Huge tree fell down on the road in {city} due to the storm. Traffic is blocked. #StormAlert",
+    "It's getting really hot in {city}. 44 degrees and counting. Stay safe guys! #SummerHeat",
+]
+
     "IMD update: Heavy to very heavy rainfall expected over {city} district in next 24 hours. #IMD #WeatherAlert",
     "IMD bulletin: Temperature in {city} likely to touch 45°C today. Heatwave warning issued. #IMD",
     "IMD: Cyclonic circulation observed off the coast near {city}. Fishermen advised not to venture into sea. #IMD",
@@ -145,12 +158,14 @@ class MockDataGenerator:
 
     SOURCES = {
         "imd_official": {"weight": 0.12, "templates": IMD_TEMPLATES, "type": "official"},
+        "ndma_official": {"weight": 0.08, "templates": NDMA_TEMPLATES, "type": "official"},
         "news_reuters": {"weight": 0.10, "templates": NEWS_TEMPLATES, "type": "news"},
         "news_toi": {"weight": 0.10, "templates": NEWS_TEMPLATES, "type": "news"},
         "news_hindustan": {"weight": 0.10, "templates": NEWS_TEMPLATES, "type": "news"},
-        "twitter_verified": {"weight": 0.18, "templates": TWITTER_TEMPLATES_REAL, "type": "social"},
-        "twitter_citizen": {"weight": 0.20, "templates": TWITTER_TEMPLATES_REAL + TWITTER_TEMPLATES_FAKE, "type": "social"},
-        "citizen_report": {"weight": 0.20, "templates": CITIZEN_TEMPLATES, "type": "citizen"},
+        "twitter_verified": {"weight": 0.15, "templates": TWITTER_TEMPLATES_REAL, "type": "social"},
+        "twitter_citizen": {"weight": 0.15, "templates": TWITTER_TEMPLATES_REAL + TWITTER_TEMPLATES_FAKE, "type": "social"},
+        "facebook_citizen": {"weight": 0.15, "templates": FACEBOOK_CITIZEN_TEMPLATES, "type": "social"},
+        "citizen_report": {"weight": 0.15, "templates": CITIZEN_TEMPLATES, "type": "citizen"},
     }
 
     def __init__(self, seed: int | None = None):
