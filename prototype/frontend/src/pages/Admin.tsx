@@ -425,7 +425,6 @@ export function Admin() {
                     </div>
                   </div>
                 </>
-                </>
               )}
             </>
           )}
