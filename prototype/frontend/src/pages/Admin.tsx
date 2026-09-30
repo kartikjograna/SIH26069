@@ -38,18 +38,18 @@ export function Admin() {
 
   const load = useCallback(async () => {
     try {
-      const [qRes, s, r] = await Promise.all([
-        api.reviewQueue({
-          limit: LIMIT,
-          offset,
-          sortBy,
-          sortDir,
-          minConf: confRange.min,
-          maxConf: confRange.max,
-        }),
-        api.sources(),
-        api.recentEvents(60),
-      ])
+      // Load sequentially instead of Promise.all to avoid choking Render Free Tier on boot
+      const qRes = await api.reviewQueue({
+        limit: LIMIT,
+        offset,
+        sortBy,
+        sortDir,
+        minConf: confRange.min,
+        maxConf: confRange.max,
+      })
+      const s = await api.sources()
+      const r = await api.recentEvents(60)
+
       cachedQueue = qRes.items
       cachedSources = s
       cachedRecent = r
