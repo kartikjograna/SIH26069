@@ -1,5 +1,3 @@
-import type { WeatherEvent, SourceCredibility } from './types'
-
 export type VerificationStatus = 'verified' | 'manual_review' | 'rejected' | 'pending'
 
 export interface VerificationResult {
@@ -35,6 +33,25 @@ export interface WeatherEvent {
   predicted_categories: Record<string, number>
   is_duplicate: boolean
   verification: VerificationResult | null
+}
+
+export interface LiveEvent {
+  id: number
+  source: string
+  text: string
+  city: string
+  state: string
+  latitude: number
+  longitude: number
+  has_image: boolean
+  image_url: string | null
+  event_time: string
+  ingested_at: string
+  verification_status: VerificationStatus
+  confidence_score: number
+  predicted_categories: Record<string, number>
+  is_duplicate: boolean
+  reasons: string[]
 }
 
 export interface EventMarker {
@@ -79,6 +96,7 @@ export interface Stats {
   avg_confidence: number
   by_category: Record<string, number>
   by_source: Record<string, number>
+  by_state: Record<string, number>
 }
 
 export interface SourceCredibility {
@@ -114,7 +132,7 @@ export interface EventFilters {
 }
 
 export function toMarker(
-  e: WeatherEvent | EventMarker,
+  e: WeatherEvent | LiveEvent | EventMarker,
   isLive = false
 ): EventMarker {
   const reasons =
