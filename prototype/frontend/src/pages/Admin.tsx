@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import type { SourceCredibility, WeatherEvent } from '../types'
+import type { SourceCredibility, WeatherEvent, Cluster } from '../types'
 import { toMarker, topCategory } from '../types'
-import { STATUS, categoryLabel, sourceLabel, statusToken } from '../theme'
+import { categoryLabel, sourceLabel, statusToken } from '../theme'
 import { StatTile } from '../components/StatTile'
 import { StatusBadge, Tag } from '../components/StatusBadge'
 import { VerificationPanel } from '../components/VerificationPanel'
@@ -121,7 +121,7 @@ export function Admin() {
         <StatTile
           label="Awaiting review"
           value={queue.length}
-          swatch={STATUS.manual_review.color}
+          swatch={statusToken('manual_review').color}
           loading={loading && queue.length === 0 && sources.length === 0}
           hero
         />

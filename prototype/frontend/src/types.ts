@@ -1,8 +1,7 @@
-/** Types mirroring backend/schemas.py and the WebSocket broadcast payload. */
+import type { WeatherEvent, SourceCredibility } from './types'
 
 export type VerificationStatus = 'verified' | 'manual_review' | 'rejected' | 'pending'
 
-/** backend/schemas.py :: VerificationResultSchema */
 export interface VerificationResult {
   fake_news_score: number
   fake_news_model: string
@@ -15,7 +14,6 @@ export interface VerificationResult {
   verified_at: string
 }
 
-/** backend/schemas.py :: WeatherEventSchema (the full REST shape). */
 export interface WeatherEvent {
   id: number
   external_id: string
@@ -39,34 +37,6 @@ export interface WeatherEvent {
   verification: VerificationResult | null
 }
 
-/**
- * The WebSocket payload is IngestionPipeline._to_payload -- a *subset* of
- * WeatherEventSchema. It carries `reasons` inline and has no nested
- * `verification` object, no external_id/language/source_credibility/has_video.
- */
-export interface LiveEvent {
-  id: number
-  source: string
-  text: string
-  city: string
-  state: string
-  latitude: number
-  longitude: number
-  has_image: boolean
-  image_url: string | null
-  event_time: string
-  ingested_at: string
-  verification_status: VerificationStatus
-  confidence_score: number
-  predicted_categories: Record<string, number>
-  is_duplicate: boolean
-  reasons: string[]
-}
-
-/**
- * The fields the map and event list actually need -- present in both the REST
- * and WebSocket shapes, so live and fetched events render through one path.
- */
 export interface EventMarker {
   id: number
   source: string
@@ -81,12 +51,22 @@ export interface EventMarker {
   confidence_score: number
   predicted_categories: Record<string, number>
   is_duplicate: boolean
-  /** Present on live events; derived from `verification` for fetched ones. */
   reasons: string[]
   isLive?: boolean
 }
 
-/** backend/schemas.py :: StatsSchema */
+export interface Cluster {
+  cluster_id: string
+  centroid: { lat: number; lng: number }
+  category: string
+  event_count: number
+  event_ids: number[]
+  time_range: { start: string; end: string }
+  city: string
+  avg_confidence?: number | null
+  state?: string | null
+}
+
 export interface Stats {
   total_events: number
   verified: number
@@ -99,10 +79,8 @@ export interface Stats {
   avg_confidence: number
   by_category: Record<string, number>
   by_source: Record<string, number>
-  by_state: Record<string, number>
 }
 
-/** backend/schemas.py :: SourceCredibilitySchema */
 export interface SourceCredibility {
   source_name: string
   source_type: string
@@ -111,7 +89,6 @@ export interface SourceCredibility {
   verified_reports: number
 }
 
-/** backend/schemas.py :: CitizenReport */
 export interface CitizenReportInput {
   text: string
   city: string
@@ -136,7 +113,10 @@ export interface EventFilters {
   offset?: number
 }
 
-export function toMarker(e: WeatherEvent | LiveEvent, isLive = false): EventMarker {
+export function toMarker(
+  e: WeatherEvent | EventMarker,
+  isLive = false
+): EventMarker {
   const reasons =
     'reasons' in e && Array.isArray(e.reasons)
       ? e.reasons
@@ -160,8 +140,7 @@ export function toMarker(e: WeatherEvent | LiveEvent, isLive = false): EventMark
   }
 }
 
-/** The highest-scoring predicted category, for labelling a marker. */
-export function topCategory(cats: Record<string, number>): string {
+export function topCategory(cats: Record<string, number>) {
   const entries = Object.entries(cats ?? {})
   if (entries.length === 0) return 'general'
   return entries.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0]

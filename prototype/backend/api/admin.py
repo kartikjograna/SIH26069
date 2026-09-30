@@ -3,12 +3,24 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from typing import Optional
+from typing import Optional, List, Dict
+from datetime import datetime, timedelta
+import math
 
 from ..database import get_db
 from ..models import WeatherEvent, VerificationResult, SourceCredibility
-from ..schemas import ManualReviewAction, WeatherEventSchema, SourceCredibilitySchema, ReviewQueueResponse
+from ..schemas import ManualReviewAction, WeatherEventSchema, SourceCredibilitySchema, ReviewQueueResponse, ClusterResponse
 from .events import invalidate_stats_cache
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate the great circle distance between two points in kilometers."""
+    R = 6371.0  # Earth radius in kilometers
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2)**2
+    return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -55,6 +67,83 @@ async def review_queue(
     items = result.scalars().all()
 
     return ReviewQueueResponse(items=items, total=total)
+
+
+@router.get("/clusters", response_model=List[ClusterResponse])
+async def get_clusters(db: AsyncSession = Depends(get_db)):
+    """Group manual review events into temporal-spatial clusters."""
+    stmt = select(WeatherEvent).where(WeatherEvent.verification_status == "manual_review")
+    result = await db.execute(stmt)
+    events = result.scalars().all()
+
+    if not events:
+        return []
+
+    # Step 1: Broad Grouping by City and Primary Category
+    groups: Dict[tuple, List[WeatherEvent]] = {}
+    for e in events:
+        # Get the category with the highest score
+        category = "unknown"
+        if e.predicted_categories:
+            category = max(e.predicted_categories, key=e.predicted_categories.get)
+
+        group_key = (e.city, category)
+        if group_key not in groups:
+            groups[group_key] = []
+        groups[group_key].append(e)
+
+    clusters: List[ClusterResponse] = []
+
+    # Step 2: Refined Clustering within each group
+    for (city, category), group_events in groups.items():
+        processed = set()
+
+        # Sort events by time to make seed selection consistent
+        sorted_events = sorted(group_events, key=lambda x: x.event_time)
+
+        for i, seed in enumerate(sorted_events):
+            if seed.id in processed:
+                continue
+
+            cluster_ids = [seed.id]
+            member_events = [seed]
+            processed.add(seed.id)
+
+            for j in range(i + 1, len(sorted_events)):
+                candidate = sorted_events[j]
+                if candidate.id in processed:
+                    continue
+
+                # Temporal Threshold: +/- 6 hours
+                time_diff = abs((candidate.event_time - seed.event_time).total_seconds())
+                is_temporal = time_diff <= (6 * 3600)
+
+                # Spatial Threshold: <= 10km
+                dist = haversine_distance(seed.latitude, seed.longitude, candidate.latitude, candidate.longitude)
+                is_spatial = dist <= 10.0
+
+                if is_temporal and is_spatial:
+                    cluster_ids.append(candidate.id)
+                    member_events.append(candidate)
+                    processed.add(candidate.id)
+
+            # Calculate Cluster Metadata
+            avg_lat = sum(e.latitude for e in member_events) / len(member_events)
+            avg_lng = sum(e.longitude for e in member_events) / len(member_events)
+            start_time = min(e.event_time for e in member_events)
+            end_time = max(e.event_time for e in member_events)
+
+            clusters.append(ClusterResponse(
+                cluster_id=f"cluster_{city}_{category}_{seed.id}",
+                centroid={"lat": avg_lat, "lng": avg_lng},
+                category=category,
+                event_count=len(cluster_ids),
+                event_ids=cluster_ids,
+                time_range={"start": start_time, "end": end_time},
+                city=city
+            ))
+
+    return clusters
 
 
 @router.post("/review-action")

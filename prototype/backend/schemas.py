@@ -75,6 +75,17 @@ class ReviewQueueResponse(BaseModel):
     total: int
 
 
+class ClusterResponse(BaseModel):
+    """Response for grouped weather events (clusters)."""
+    cluster_id: str
+    centroid: Dict[str, float]
+    category: str
+    event_count: int
+    event_ids: List[int]
+    time_range: Dict[str, datetime]
+    city: str
+
+
 class StatsSchema(BaseModel):
     total_events: int
     verified: int
