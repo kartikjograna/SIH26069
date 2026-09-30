@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import type { SourceCredibility, WeatherEvent, Cluster } from '../types'
+import type { SourceCredibility, WeatherEvent } from '../types'
 import { toMarker, topCategory } from '../types'
 import { categoryLabel, sourceLabel, statusToken } from '../theme'
 import { StatTile } from '../components/StatTile'
