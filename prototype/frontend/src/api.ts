@@ -54,6 +54,15 @@ function query(filters: EventFilters): string {
   return s ? `?${s}` : ''
 }
 
+type ReviewQueueOptions = {
+  limit?: number
+  offset?: number
+  sortBy?: 'ingested_at' | 'confidence_score'
+  sortDir?: 'asc' | 'desc'
+  minConf?: number
+  maxConf?: number
+}
+
 export const api = {
   listEvents: (filters: EventFilters = {}) =>
     request<WeatherEvent[]>(`/api/events${query(filters)}`),
@@ -78,8 +87,18 @@ export const api = {
     })
   },
 
-  reviewQueue: (limit = 50) =>
-    request<WeatherEvent[]>(`/api/admin/review-queue?limit=${limit}`),
+  reviewQueue: (options: ReviewQueueOptions = {}) => {
+    const p = new URLSearchParams()
+    if (options.limit) p.set('limit', String(options.limit))
+    if (options.offset) p.set('offset', String(options.offset))
+    if (options.sortBy) p.set('sort_by', options.sortBy)
+    if (options.sortDir) p.set('sort_dir', options.sortDir)
+    if (options.minConf !== undefined) p.set('min_conf', String(options.minConf))
+    if (options.maxConf !== undefined) p.set('max_conf', String(options.maxConf))
+    return request<{ items: WeatherEvent[]; total: number }>(
+      `/api/admin/review-queue?${p.toString()}`,
+    )
+  },
 
   reviewAction: (event_id: number, action: 'approve' | 'reject', notes?: string) =>
     request<{ event_id: number; new_status: string; notes: string | null }>(

@@ -30,6 +30,12 @@ class EventFilter(BaseModel):
     offset: int = 0
 
 
+class ReviewQueueResponse(BaseModel):
+    """Wrapped response for the admin review queue to support pagination."""
+    items: List[WeatherEventSchema]
+    total: int
+
+
 # ---------- Responses ----------
 
 class VerificationResultSchema(BaseModel):

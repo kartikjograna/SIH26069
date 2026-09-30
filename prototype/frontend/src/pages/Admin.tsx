@@ -20,6 +20,7 @@ export function Admin() {
   const hasCache = cachedQueue !== null && cachedSources !== null && cachedRecent !== null
 
   const [queue, setQueue] = useState<WeatherEvent[]>(cachedQueue ?? [])
+  const [totalQueue, setTotalQueue] = useState(0)
   const [sources, setSources] = useState<SourceCredibility[]>(cachedSources ?? [])
   const [recent, setRecent] = useState<WeatherEvent[]>(cachedRecent ?? [])
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -28,17 +29,32 @@ export function Admin() {
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(!hasCache)
 
+  // Pagination & Sorting State
+  const [offset, setOffset] = useState(0)
+  const [sortBy, setSortBy] = useState<'ingested_at' | 'confidence_score'>('ingested_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [confRange, setConfRange] = useState({ min: 0, max: 1 })
+  const LIMIT = 50
+
   const load = useCallback(async () => {
     try {
-      const [q, s, r] = await Promise.all([
-        api.reviewQueue(100),
+      const [qRes, s, r] = await Promise.all([
+        api.reviewQueue({
+          limit: LIMIT,
+          offset,
+          sortBy,
+          sortDir,
+          minConf: confRange.min,
+          maxConf: confRange.max,
+        }),
         api.sources(),
         api.recentEvents(60),
       ])
-      cachedQueue = q
+      cachedQueue = qRes.items
       cachedSources = s
       cachedRecent = r
-      setQueue(q)
+      setQueue(qRes.items)
+      setTotalQueue(qRes.total)
       setSources(s)
       setRecent(r)
       setError(null)
@@ -47,7 +63,7 @@ export function Admin() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [offset, sortBy, sortDir, confRange])
 
   useEffect(() => {
     load()
@@ -156,8 +172,49 @@ export function Admin() {
           {tab === 'queue' && (
             <>
               <div className="card-head">
-                <span className="card-title">Manual review queue</span>
-                <span className="card-note">highest confidence first</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <div>
+                    <span className="card-title">Manual review queue</span>
+                    <span className="card-note">Experts decision needed</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => {
+                        setSortBy(e.target.value as any)
+                        setSortDir(e.target.value === 'confidence_score' ? 'asc' : 'desc')
+                        setOffset(0)
+                      }}
+                      style={{ fontSize: 12, padding: 4, borderRadius: 4, border: '1px solid var(--border)' }}
+                    >
+                      <option value="ingested_at">Newest First</option>
+                      <option value="confidence_score">Most Uncertain</option>
+                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                      <span>Conf:</span>
+                      <input
+                        type="number"
+                        value={confRange.min * 100}
+                        onChange={(e) => {
+                          setConfRange(prev => ({ ...prev, min: parseFloat(e.target.value || '0') / 100 }))
+                          setOffset(0)
+                        }}
+                        style={{ width: 40, padding: 2, borderRadius: 4, border: '1px solid var(--border)' }}
+                      />
+                      <span>-</span>
+                      <input
+                        type="number"
+                        value={confRange.max * 100}
+                        onChange={(e) => {
+                          setConfRange(prev => ({ ...prev, max: parseFloat(e.target.value || '0') / 100 }))
+                          setOffset(0)
+                        }}
+                        style={{ width: 40, padding: 2, borderRadius: 4, border: '1px solid var(--border)' }}
+                      />
+                      <span>%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               {loading && queue.length === 0 ? (
                 <div className="empty">Loading queue…</div>
@@ -242,6 +299,36 @@ export function Admin() {
                       </tbody>
                     </table>
                   </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    borderTop: '1px solid var(--border)',
+                    fontSize: 12,
+                    color: 'var(--text-secondary)'
+                  }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={offset === 0}
+                      onClick={() => setOffset(prev => prev - LIMIT)}
+                      style={{ padding: '4px 8px' }}
+                    >
+                      ← Previous
+                    </button>
+                    <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={queue.length < LIMIT}
+                      onClick={() => setOffset(prev => prev + LIMIT)}
+                      style={{ padding: '4px 8px' }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </>
 
                   {/* Mobile Cards View - zero horizontal scroll, instant touch actions */}
                   <div className="queue-mobile-list">
@@ -307,7 +394,37 @@ export function Admin() {
                         </div>
                       </div>
                     ))}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px',
+                      fontSize: 12,
+                      color: 'var(--text-secondary)',
+                      borderTop: '1px solid var(--border)'
+                    }}>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={offset === 0}
+                        onClick={() => setOffset(prev => prev - LIMIT)}
+                        style={{ padding: '4px 8px' }}
+                      >
+                        ← Previous
+                      </button>
+                      <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={queue.length < LIMIT}
+                        onClick={() => setOffset(prev => prev + LIMIT)}
+                        style={{ padding: '4px 8px' }}
+                      >
+                        Next →
+                      </button>
+                    </div>
                   </div>
+                </>
                 </>
               )}
             </>
