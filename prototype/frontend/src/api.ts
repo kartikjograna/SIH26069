@@ -63,22 +63,18 @@ export const api = {
   stats: () => request<Stats>('/api/events/stats/overview'),
 
   submitCitizenReport: (report: CitizenReportInput, imageFile?: File) => {
-    if (imageFile) {
-      const formData = new FormData()
-      for (const [key, value] of Object.entries(report)) {
-        if (value !== undefined && value !== null) {
-          formData.append(key, String(value))
-        }
+    const formData = new FormData()
+    for (const [key, value] of Object.entries(report)) {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value))
       }
+    }
+    if (imageFile) {
       formData.append('image', imageFile)
-      return request<WeatherEvent>('/api/events/citizen-report', {
-        method: 'POST',
-        body: formData,
-      })
     }
     return request<WeatherEvent>('/api/events/citizen-report', {
       method: 'POST',
-      body: JSON.stringify(report),
+      body: formData,
     })
   },
 
