@@ -171,26 +171,54 @@ export function Admin() {
           {tab === 'queue' && (
             <>
               <div className="card-head">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <div>
-                    <span className="card-title">Manual review queue</span>
-                    <span className="card-note">Experts decision needed</span>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  width: '100%',
+                  gap: 16
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span className="card-title">Manual Review Queue</span>
+                    <span className="card-note" style={{ fontSize: 13, opacity: 0.8 }}>
+                      Events with medium confidence require human expert verification.
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => {
-                        setSortBy(e.target.value as any)
-                        setSortDir(e.target.value === 'confidence_score' ? 'asc' : 'desc')
-                        setOffset(0)
-                      }}
-                      style={{ fontSize: 12, padding: 4, borderRadius: 4, border: '1px solid var(--border)' }}
-                    >
-                      <option value="ingested_at">Newest First</option>
-                      <option value="confidence_score">Most Uncertain</option>
-                    </select>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                      <span>Conf:</span>
+                  <div style={{
+                    display: 'flex',
+                    gap: 12,
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    backgroundColor: 'var(--hover-wash)',
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Sort:</span>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => {
+                          setSortBy(e.target.value as any)
+                          setSortDir(e.target.value === 'confidence_score' ? 'asc' : 'desc')
+                          setOffset(0)
+                        }}
+                        style={{
+                          fontSize: 12,
+                          padding: '2px 4px',
+                          borderRadius: 4,
+                          border: '1px solid var(--border)',
+                          background: 'var(--bg-primary)',
+                          color: 'var(--text-primary)'
+                        }}
+                      >
+                        <option value="ingested_at">Newest First</option>
+                        <option value="confidence_score">Most Uncertain</option>
+                      </select>
+                    </div>
+                    <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                      <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Conf:</span>
                       <input
                         type="number"
                         value={confRange.min * 100}
@@ -198,9 +226,9 @@ export function Admin() {
                           setConfRange(prev => ({ ...prev, min: parseFloat(e.target.value || '0') / 100 }))
                           setOffset(0)
                         }}
-                        style={{ width: 40, padding: 2, borderRadius: 4, border: '1px solid var(--border)' }}
+                        style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                       />
-                      <span>-</span>
+                      <span style={{ opacity: 0.5 }}>-</span>
                       <input
                         type="number"
                         value={confRange.max * 100}
@@ -208,9 +236,9 @@ export function Admin() {
                           setConfRange(prev => ({ ...prev, max: parseFloat(e.target.value || '0') / 100 }))
                           setOffset(0)
                         }}
-                        style={{ width: 40, padding: 2, borderRadius: 4, border: '1px solid var(--border)' }}
+                        style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                       />
-                      <span>%</span>
+                      <span style={{ fontWeight: 500 }}>%</span>
                     </div>
                   </div>
                 </div>
