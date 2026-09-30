@@ -219,25 +219,53 @@ export function Admin() {
                     <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                       <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Conf:</span>
-                      <input
-                        type="number"
-                        value={confRange.min * 100}
-                        onChange={(e) => {
-                          setConfRange(prev => ({ ...prev, min: parseFloat(e.target.value || '0') / 100 }))
-                          setOffset(0)
-                        }}
-                        style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                      />
+                      <div style={{ width: '50px', flexShrink: 0 }}>
+                        <input
+                          type="number"
+                          value={confRange.min * 100}
+                          onChange={(e) => {
+                            setConfRange(prev => ({ ...prev, min: parseFloat(e.target.value || '0') / 100 }))
+                            setOffset(0)
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'center',
+                            padding: '2px 2px',
+                            borderRadius: 4,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)',
+                            boxSizing: 'border-box',
+                            appearance: 'textfield',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'textfield'
+                          }}
+                        />
+                      </div>
                       <span style={{ opacity: 0.5 }}>-</span>
-                      <input
-                        type="number"
-                        value={confRange.max * 100}
-                        onChange={(e) => {
-                          setConfRange(prev => ({ ...prev, max: parseFloat(e.target.value || '0') / 100 }))
-                          setOffset(0)
-                        }}
-                        style={{ width: 40, padding: '2px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                      />
+                      <div style={{ width: '50px', flexShrink: 0 }}>
+                        <input
+                          type="number"
+                          value={confRange.max * 100}
+                          onChange={(e) => {
+                            setConfRange(prev => ({ ...prev, max: parseFloat(e.target.value || '0') / 100 }))
+                            setOffset(0)
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'center',
+                            padding: '2px 2px',
+                            borderRadius: 4,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)',
+                            boxSizing: 'border-box',
+                            appearance: 'textfield',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'textfield'
+                          }}
+                        />
+                      </div>
                       <span style={{ fontWeight: 500 }}>%</span>
                     </div>
                   </div>
