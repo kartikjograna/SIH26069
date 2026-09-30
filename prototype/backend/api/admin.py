@@ -34,7 +34,7 @@ async def review_queue(
         base_stmt = base_stmt.where(WeatherEvent.confidence_score <= max_conf)
 
     # 3. Get total count for pagination
-    count_stmt = select(func.count(WeatherEvent.id)).select_from(base_stmt.subquery())
+    count_stmt = select(func.count()).select_from(base_stmt.subquery())
     total_res = await db.execute(count_stmt)
     total = total_res.scalar() or 0
 
