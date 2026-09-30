@@ -328,6 +328,172 @@ export function Admin() {
                       Next →
                     </button>
                   </div>
+
+                  {/* Mobile Cards View - zero horizontal scroll, instant touch actions */}
+                  <div className="queue-mobile-list">
+                    {queue.map((e) => (
+                      <div
+                        key={e.id}
+                        className={`queue-card ${selectedId === e.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedId(e.id)}
+                      >
+                        <div className="queue-card-header">
+                          <div className="queue-card-badge-group">
+                            <span
+                              className="queue-conf-badge"
+                              style={{
+                                color: statusToken('manual_review').color,
+                                borderColor: statusToken('manual_review').color,
+                              }}
+                            >
+                              {(e.confidence_score * 100).toFixed(0)}% Conf
+                            </span>
+                            <Tag>{sourceLabel(e.source)}</Tag>
+                          </div>
+                          <span className="queue-card-location">
+                            <strong>{e.city}</strong>, {e.state}
+                          </span>
+                        </div>
+
+                        <div className="queue-card-body">
+                          <p className="queue-card-text">{e.text}</p>
+                          <div className="queue-card-meta">
+                            <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
+                            {e.verification?.reasons.length ? (
+                              <span className="queue-flag-note">
+                                ⚠ {e.verification.reasons.join('; ')}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="queue-card-actions">
+                          <button
+                            type="button"
+                            className="btn btn-approve queue-btn"
+                            disabled={busyId === e.id}
+                            onClick={(ev) => {
+                              ev.stopPropagation()
+                              act(e.id, 'approve')
+                            }}
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-reject queue-btn"
+                            disabled={busyId === e.id}
+                            onClick={(ev) => {
+                              ev.stopPropagation()
+                              act(e.id, 'reject')
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px',
+                      fontSize: 12,
+                      color: 'var(--text-secondary)',
+                      borderTop: '1px solid var(--border)'
+                    }}>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={offset === 0}
+                        onClick={() => setOffset(prev => prev - LIMIT)}
+                        style={{ padding: '4px 8px' }}
+                      >
+                        ← Previous
+                      </button>
+                      <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={queue.length < LIMIT}
+                        onClick={() => setOffset(prev => prev + LIMIT)}
+                        style={{ padding: '4px 8px' }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+                              </div>
+                            </td>
+                            <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
+                            <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                              {e.verification?.reasons.length
+                                ? e.verification.reasons.join('; ')
+                                : '—'}
+                            </td>
+                            <td className="sticky-action-col">
+                              <div className="btn-row">
+                                <button
+                                  type="button"
+                                  className="btn btn-approve"
+                                  disabled={busyId === e.id}
+                                  onClick={(ev) => {
+                                    ev.stopPropagation()
+                                    act(e.id, 'approve')
+                                  }}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-reject"
+                                  disabled={busyId === e.id}
+                                  onClick={(ev) => {
+                                    ev.stopPropagation()
+                                    act(e.id, 'reject')
+                                  }}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    borderTop: '1px solid var(--border)',
+                    fontSize: 12,
+                    color: 'var(--text-secondary)'
+                  }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={offset === 0}
+                      onClick={() => setOffset(prev => prev - LIMIT)}
+                      style={{ padding: '4px 8px' }}
+                    >
+                      ← Previous
+                    </button>
+                    <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={queue.length < LIMIT}
+                      onClick={() => setOffset(prev => prev + LIMIT)}
+                      style={{ padding: '4px 8px' }}
+                    >
+                      Next →
+                    </button>
+                  </div>
                 </>
 
                   {/* Mobile Cards View - zero horizontal scroll, instant touch actions */}
