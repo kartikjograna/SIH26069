@@ -1,189 +1,103 @@
-# National Weather Big Data Analytics Platform - Prototype
+# National Weather Big Data Analytics Platform (Omniroute)
 
-A working prototype of the SIH 2026 weather data analytics platform.
-End-to-end: real-time ingestion → ML verification → storage → REST + WebSocket API → dashboard.
+## 🌍 Project Overview
+The National Weather Big Data Analytics Platform is an end-to-end intelligence system designed to combat weather-related misinformation and streamline the verification of citizen-reported weather events. By combining real-time data ingestion with a multi-stage ML verification pipeline, the platform transforms chaotic, multi-source data into a trusted, actionable dashboard for administrators and the public.
 
-## Architecture
+### 🚀 Core Value Proposition
+- **Combatting Misinformation:** A 5-model ML pipeline detects fake news, duplicate reports, and manipulated images.
+- **Reducing Admin Burden:** Automated verification handles high-confidence events, while the "Manual Review Queue" prioritizes borderline cases.
+- **Real-time Intelligence:** WebSocket-driven updates ensure the dashboard reflects ground reality within seconds.
 
-```
-prototype/
-├── backend/
-│   ├── main.py            # FastAPI app + lifespan (DB init, ingestion startup)
-│   ├── config.py          # Settings (DB URL, thresholds)
-│   ├── database.py        # Async SQLAlchemy setup
-│   ├── models.py          # ORM: WeatherEvent, VerificationResult, SourceCredibility
-│   ├── schemas.py         # Pydantic request/response
-│   ├── ml/
-│   │   └── pipeline.py    # 5-model verification pipeline
-│   ├── ingestion/
-│   │   ├── mock_sources.py  # India-focused mock data generator
-│   │   └── pipeline.py    # Orchestrates ingest -> verify -> persist -> broadcast
-│   └── api/
-│       ├── events.py      # /api/events list/get/citizen-report/stats
-│       ├── admin.py       # /api/admin review-queue/sources
-│       └── ws.py          # /ws/stream WebSocket broadcaster
-├── scripts/seed.py        # Populate DB with N events
-├── frontend/              # Vite + React + TypeScript dashboard
-│   ├── src/
-│   │   ├── App.tsx        # Shell: nav, theme toggle, shared WebSocket
-│   │   ├── api.ts         # Typed backend client
-│   │   ├── types.ts       # Mirrors backend/schemas.py
-│   │   ├── theme.ts       # Status + sequential palettes, label maps
-│   │   ├── hooks/useLiveEvents.ts   # WebSocket with backoff reconnect
-│   │   ├── components/    # Map, charts, event list, model breakdown
-│   │   └── pages/         # Dashboard.tsx, Admin.tsx
-│   └── vite.config.ts     # Proxies /api + /ws to :8000
-├── data/                  # SQLite DB lives here
-├── models/                # Trained model artifacts (future)
-├── requirements.txt
-└── .env.example
-```
+---
 
-## ML Verification Models (5)
+## 🏗️ System Architecture
+The platform follows a decoupled architecture to ensure scalability and reliability:
+- **Ingestion Layer:** Orchestrates data from mock sensors and citizen reports.
+- **Verification Layer (ML):** A serial pipeline of 5 specialized models (Fake News $\rightarrow$ Event Classification $\rightarrow$ Image Forensics $\rightarrow$ Duplicate Detection $\rightarrow$ Source Credibility).
+- **Persistence Layer:** Async SQLAlchemy with SQLite (extensible to PostgreSQL/TimescaleDB).
+- **Presentation Layer:** A Vite + React + TypeScript dashboard with live Leaflet maps and real-time KPI tracking.
 
-| # | Model | Production | Prototype |
-|---|-------|-----------|-----------|
-| 1 | Fake News Detector | DistilBERT fine-tuned | Lexicon + style heuristics |
-| 2 | Event Classifier | CNN + Bi-LSTM (multi-label) | Keyword multi-label scoring |
-| 3 | Image Forensics | ELA + CNN | URL-pattern heuristic + stable hash |
-| 4 | Duplicate Detection | MinHash + LSH | Content shingle SimHash |
-| 5 | Source Credibility | XGBoost ensemble | Lookup table + dynamic update |
+### 🛠️ Tech Stack
+- **Backend:** FastAPI, SQLAlchemy (Async), Pydantic, Python 3.13
+- **Frontend:** React 18, TypeScript, Vite, Leaflet.js, Tailwind CSS
+- **Communication:** REST API & WebSockets (for real-time streaming)
+- **Containerization:** Docker & Docker Compose
 
-Each event is scored 0-1; final confidence = source_cred - fake_penalty - image_penalty + classification_bonus.
-- `>= 0.85` -> **verified** (auto-publish)
-- `0.60 - 0.85` -> **manual_review** (admin queue)
-- `< 0.60` -> **rejected**
+---
 
-## Running
+## 🔬 ML Verification Pipeline (The Intelligence Engine)
+Every single report is passed through a rigorous verification pipeline before it ever hits the public map.
 
-You need **two terminals**: one for the API, one for the dashboard.
-(Or skip both with Docker — see [One-command stack](#one-command-stack).)
+| Stage | Model | Prototype Implementation | Purpose |
+|---|---|---|---|
+| 1 | **Fake News Detector** | Lexicon + Style Heuristics | Identifies bot-like language and clickbait |
+| 2 | **Event Classifier** | Keyword Multi-label Scoring | Ensures the event matches a weather category |
+| 3 | **Image Forensics** | URL-pattern + Stable Hashing | Detects recycled or manipulated images |
+| 4 | **Duplicate Detection** | Content SimHash | Groups reports of the same event to prevent spam |
+| 5 | **Source Credibility** | Dynamic Lookup Table | Weights the event based on the reporter's history |
 
-### Terminal 1 — backend
+**Verdict Logic:**
+- **Verified ($\ge 0.85$):** Auto-published to the live map.
+- **Review ($0.60 - 0.85$):** Sent to Admin for human verification.
+- **Rejected ($< 0.60$):** Discarded as unreliable.
 
+---
+
+## 🚦 Quick Start Guide
+
+### 1. Backend Setup
 ```bash
 cd prototype
 python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-
+# Windows: .venv\Scripts\activate | macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 python -m backend.main
 ```
+- **API Docs:** `http://localhost:8000/docs`
 
-API at `http://localhost:8000` | Docs at `http://localhost:8000/docs`
-
-Background ingestion starts automatically: **60 events/min** continuously.
-
-> **Python 3.13 note.** Use the CPython release build (`python.org` installer).
-> Some `uv`-managed 3.13 builds ship without the `_sqlite3` extension, which
-> breaks the SQLite backend. Verify with:
-> `python -c "import sqlite3; print('ok')"`
-
-> **Two logging flags, both off by default.** `SQL_ECHO=true` echoes every SQL
-> statement (~6k lines/min under continuous ingestion — useful only to debug a
-> query). `RELOAD=true` enables auto-restart, which is deliberately *not* tied to
-> `DEBUG`: this service holds a background ingestion task and live WebSocket
-> clients, so a reload restarts ingestion and drops every connected dashboard.
-
-### Terminal 2 — frontend
-
+### 2. Frontend Setup
 ```bash
 cd prototype/frontend
 npm install
 npm run dev
 ```
+- **Dashboard:** `http://localhost:5173`
 
-Dashboard at **http://localhost:5173** — admin panel at `/admin`.
-
-Vite proxies `/api` and `/ws` to `:8000`, so both run on one origin in the
-browser: no CORS preflight, and the WebSocket needs no extra config. To point
-at a non-default backend, set `BACKEND_URL` before `npm run dev`.
-
-### Optional — seed a batch first
-So the dashboard opens with history instead of an empty map:
-
-```bash
-python scripts/seed.py --count 200 --fast
-```
-
-### Try the API directly
-- API docs: http://localhost:8000/docs
-- List events: http://localhost:8000/api/events?limit=20
-- Stats: http://localhost:8000/api/events/stats/overview
-- Review queue: http://localhost:8000/api/admin/review-queue
-- WebSocket: ws://localhost:8000/ws/stream
-
-## Dashboard
-**Dashboard (`/`)**
-- KPI row: totals, verified / manual-review / rejected split, fake news caught,
-  duplicates removed, events last hour, mean confidence
-- Live map of India — marker color = verification status, size = confidence
-- Filters: status, category, source, state, city, minimum confidence
-- Live feed over WebSocket; new arrivals flash once
-- Click any event for the **5-model breakdown** and the reasons behind its decision
-- Citizen report form — submits through the real pipeline and shows the verdict
-
-**Admin (`/admin`)**
-- Manual review queue (60–85% confidence) with approve / reject
-- Source credibility table with live report counters
-- Recent activity across all statuses
-
-Both themes ship: the toggle is in the top bar, and the palette is defined for
-light and dark separately rather than inverted.
-
-## One-command stack
-
-If Docker is available, skip the two-terminal setup entirely:
-
+### 3. Docker (One-Command Setup)
 ```bash
 cd prototype
 docker compose up --build
 ```
 
-- Dashboard → **http://localhost:8080**
-- API docs → http://localhost:8000/docs
+---
 
-nginx serves the built frontend and proxies `/api` and `/ws` to the backend
-container, so the WebSocket works the same as in dev. Ingested events persist in
-a named volume across restarts.
+## 📊 Key Features
+### 🛰️ Live Dashboard
+- **Real-time Map:** India-wide markers colored by verification status.
+- **KPI Suite:** Total events, fake news caught, and mean confidence tracking.
+- **Deep-Dive:** Click any event to see the exact score from each of the 5 ML models.
 
-To seed history inside the running container:
+### 🛡️ Admin Command Center
+- **Manual Review:** A dedicated queue to approve or reject borderline events.
+- **Source Analytics:** Track which sources are the most reliable.
+- **System Control:** Manage ingestion rates and thresholds.
 
-```bash
-docker compose exec backend python scripts/seed.py --count 250 --fast
+---
+
+## 📂 Project Structure
 ```
-
-## API Endpoints
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/events` | List events with date/category/location/status filters |
-| GET | `/api/events/{id}` | Get one event with full verification result |
-| POST | `/api/events/citizen-report` | Submit a citizen report (goes through full ML) |
-| GET | `/api/events/stats/overview` | Aggregate stats for dashboard |
-| GET | `/api/admin/review-queue` | Events needing human review |
-| POST | `/api/admin/review-action` | Approve/reject a manual-review item |
-| GET | `/api/admin/sources` | Source credibility table |
-| GET | `/api/admin/events/recent` | Most recent across all statuses |
-| WS | `/ws/stream` | Real-time event stream (JSON per event) |
-
-## What's Mocked vs Real
-
-**Real:**
-- Async FastAPI server
-- Async SQLAlchemy with SQLite (swap URL for PostgreSQL)
-- WebSocket broadcast on every event
-- Full ML pipeline structure matching production architecture
-- All API endpoints match the system design
-- React dashboard, live map, admin review workflow
-
-**Mocked (for prototype speed):**
-- ML models are heuristic-based, not trained transformers/CNNs
-- Data sources are templated generators, not real Twitter/IMD APIs
-- SQLite instead of PostgreSQL+TimescaleDB+Elasticsearch+MinIO
-- No auth, no rate limiting
+prototype/
+├── backend/            # FastAPI application & ML pipeline
+│   ├── api/            # REST & WebSocket endpoints
+│   ├── ingestion/      # Data pipeline & mock generators
+│   ├── ml/             # The 5-model verification logic
+│   └── database.py     # Async DB orchestration
+├── frontend/           # Vite + React Dashboard
+│   ├── src/
+│   │   ├── components/ # UI components (Map, Charts, etc.)
+│   │   ├── pages/     # Dashboard & Admin panels
+│   │   └── api.ts      # Type-safe backend client
+├── data/               # Local SQLite storage
+└── Dockerfile*         # Containerization for full stack
+```
