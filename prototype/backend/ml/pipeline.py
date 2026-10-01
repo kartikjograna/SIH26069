@@ -183,11 +183,35 @@ class VerificationPipeline:
     def verify(self, text: str, source: str, has_image: bool, image_url: str | None) -> VerificationOutcome:
         out = VerificationOutcome()
 
-        out.fake_news_score, out.fake_news_model = fake_news_score(text)
+        # 1. Relevance Gate (Heuristic)
+        # We classify as irrelevant if:
+        # - The event classifier finds NO weather-specific categories (only "general")
+        # - AND the text is very short (e.g., < 4 words)
+        # This prevents "hi", "hello", "ok" from being accepted just because they aren't "fake".
+
         out.event_classification = event_classification(text)
+
+        # a "general" classification with no other specific weather hits is a signal for potential noise
+        has_specific_weather_hit = any(cat != "general" for cat in out.event_classification)
+        text_word_count = len(text.split())
+
+        if not has_specific_weather_hit and text_word_count < 4:
+            out.decision = "rejected"
+            out.final_confidence = 0.0
+            out.reasons = ["Irrelevant content: No weather-related information detected."]
+            # We still compute other scores for the record, but the decision is final
+            out.fake_news_score, out.fake_news_model = fake_news_score(text)
+            out.image_forensics_score = image_forensics_score(has_image, image_url)
+            out.duplicate_hash = compute_duplicate_hash(text)
+            out.source_credibility_score = source_credibility_score(source)
+            return out
+
+        # 2. Full Verification Pipeline (for relevant content)
+        out.fake_news_score, out.fake_news_model = fake_news_score(text)
         out.image_forensics_score = image_forensics_score(has_image, image_url)
         out.duplicate_hash = compute_duplicate_hash(text)
         out.source_credibility_score = source_credibility_score(source)
+
 
         base = out.source_credibility_score
         fake_penalty = out.fake_news_score * 0.3
