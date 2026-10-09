@@ -209,11 +209,12 @@ export function Admin() {
                           borderRadius: 4,
                           border: '1px solid var(--border)',
                           background: 'var(--bg-primary)',
-                          color: 'var(--text-primary)'
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer'
                         }}
                       >
-                        <option value="ingested_at">Newest First</option>
-                        <option value="confidence_score">Most Uncertain</option>
+                        <option value="ingested_at" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>Newest First</option>
+                        <option value="confidence_score" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>Most Uncertain</option>
                       </select>
                     </div>
                     <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
