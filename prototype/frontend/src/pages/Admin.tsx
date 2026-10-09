@@ -28,6 +28,7 @@ export function Admin() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(!hasCache)
+  const [sortOpen, setSortOpen] = useState(false)
 
   // Pagination & Sorting State
   const [offset, setOffset] = useState(0)
@@ -194,28 +195,85 @@ export function Admin() {
                     borderRadius: 8,
                     border: '1px solid var(--border)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
                       <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Sort:</span>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => {
-                          setSortBy(e.target.value as any)
-                          setSortDir(e.target.value === 'confidence_score' ? 'asc' : 'desc')
-                          setOffset(0)
-                        }}
-                        style={{
-                          fontSize: 12,
-                          padding: '2px 4px',
-                          borderRadius: 4,
-                          border: '1px solid var(--border)',
-                          background: 'var(--bg-primary)',
-                          color: 'var(--text-primary)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="ingested_at" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>Newest First</option>
-                        <option value="confidence_score" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>Most Uncertain</option>
-                      </select>
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSortOpen(!sortOpen)}
+                          style={{
+                            fontSize: 12,
+                            padding: '2px 8px',
+                            borderRadius: 4,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          {sortBy === 'ingested_at' ? 'Newest First' : 'Most Uncertain'}
+                          <span style={{ fontSize: 10, opacity: 1 }}>▾</span>
+                        </button>
+                        {sortOpen && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            zIndex: 100,
+                            background: 'var(--surface-1)',
+                            backgroundColor: 'var(--surface-1)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 4,
+                            minWidth: '120px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            marginTop: 4,
+                            opacity: 1,
+                            visibility: 'visible',
+                            color: 'var(--text-primary)',
+                            display: 'block'
+                          }}>
+                            <div
+                              onClick={() => {
+                                setSortBy('ingested_at')
+                                setSortDir('desc')
+                                setOffset(0)
+                                setSortOpen(false)
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                background: sortBy === 'ingested_at' ? 'var(--hover-wash)' : 'var(--bg-primary)',
+                                borderBottom: '1px solid var(--border)'
+                              }}
+                            >
+                              Newest First
+                            </div>
+                            <div
+                              onClick={() => {
+                                setSortBy('confidence_score')
+                                setSortDir('asc')
+                                setOffset(0)
+                                setSortOpen(false)
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                background: sortBy === 'confidence_score' ? 'var(--hover-wash)' : 'var(--bg-primary)',
+                                borderBottom: '1px solid var(--border)'
+                              }}
+                            >
+                              Most Uncertain
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
