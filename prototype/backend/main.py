@@ -2,11 +2,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import settings
-from .database import init_db
+from .database import init_db, get_db
 from .ingestion.pipeline import get_pipeline
 from .api.events import router as events_router
 from .api.admin import router as admin_router
@@ -83,8 +85,12 @@ async def root():
 
 
 @app.get("/health")
-async def health():
-    return {"status": "ok"}
+async def health(db: AsyncSession = Depends(get_db)):
+    try:
+        await db.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        return {"status": "error", "database": "disconnected", "detail": str(e)}
 
 
 if __name__ == "__main__":
