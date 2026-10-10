@@ -110,6 +110,8 @@ export const api = {
 
   recentEvents: (limit = 50) =>
     request<WeatherEvent[]>(`/api/admin/events/recent?limit=${limit}`),
+
+  getClusters: () => request<any[]>('/api/admin/clusters'),
 }
 
 export { ApiError }

@@ -10,7 +10,6 @@ import { EventMap } from '../components/EventMap'
 import { EventList } from '../components/EventList'
 import { VerificationPanel } from '../components/VerificationPanel'
 import { FilterSidebar } from '../components/FilterSidebar'
-import { CitizenReportForm } from '../components/CitizenReportForm'
 
 const DEFAULT_FILTERS: EventFilters = { limit: 200 }
 
@@ -225,12 +224,12 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
         onClick={() => setMobileFilterOpen((prev) => !prev)}
         aria-expanded={mobileFilterOpen}
       >
-        <span>⚡ Filter & Submit Report</span>
+        <span>⚡ Filter Data</span>
         <span>{mobileFilterOpen ? '▲ Hide' : '▼ Show'}</span>
       </button>
 
       <div className="dash-grid">
-        {/* Left: filters + citizen report */}
+        {/* Left: filters */}
         <div className={`stack dash-side-left ${!mobileFilterOpen ? 'collapsed' : ''}`}>
           <FilterSidebar
             filters={filters}
@@ -238,7 +237,6 @@ export function Dashboard({ liveEvents, liveCount }: Props) {
             states={states}
             onReset={() => setFilters(DEFAULT_FILTERS)}
           />
-          <CitizenReportForm onSubmitted={load} />
         </div>
 
         {/* Centre: map + charts */}

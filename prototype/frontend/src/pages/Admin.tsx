@@ -8,7 +8,7 @@ import { StatusBadge, Tag } from '../components/StatusBadge'
 import { VerificationPanel } from '../components/VerificationPanel'
 import { timeAgo } from '../components/EventList'
 
-type Tab = 'queue' | 'sources' | 'recent'
+type Tab = 'queue' | 'clusters' | 'sources' | 'recent'
 
 // In-memory module cache to prevent skeleton flickers during route navigation (stale-while-revalidate)
 let cachedQueue: WeatherEvent[] | null = null
@@ -21,6 +21,7 @@ export function Admin() {
 
   const [queue, setQueue] = useState<WeatherEvent[]>(cachedQueue ?? [])
   const [totalQueue, setTotalQueue] = useState(0)
+  const [clusters, setClusters] = useState<any[]>([])
   const [sources, setSources] = useState<SourceCredibility[]>(cachedSources ?? [])
   const [recent, setRecent] = useState<WeatherEvent[]>(cachedRecent ?? [])
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -48,6 +49,7 @@ export function Admin() {
         minConf: confRange.min,
         maxConf: confRange.max,
       })
+      const c = await api.getClusters()
       const s = await api.sources()
       const r = await api.recentEvents(60)
 
@@ -56,6 +58,7 @@ export function Admin() {
       cachedRecent = r
       setQueue(qRes.items)
       setTotalQueue(qRes.total)
+      setClusters(c)
       setSources(s)
       setRecent(r)
       setError(null)
@@ -109,7 +112,11 @@ export function Admin() {
   )
 
   return (
-    <div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px'
+    }}>
       <h1 className="section-title">Verification control room</h1>
       <p className="section-sub">
         Events the models scored between 60% and 85% land here for an expert decision.
@@ -147,6 +154,7 @@ export function Admin() {
         {(
           [
             ['queue', `Review queue (${queue.length})`],
+            ['clusters', `Event Clusters (${clusters.length})`],
             ['sources', 'Source credibility'],
             ['recent', 'Recent activity'],
           ] as const
@@ -167,7 +175,12 @@ export function Admin() {
         ))}
       </div>
 
-      <div className="admin-grid">
+      <div className="admin-grid" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '24px',
+        alignItems: 'start'
+      }}>
         <div className="card">
           {tab === 'queue' && (
             <>
@@ -222,9 +235,9 @@ export function Admin() {
                             position: 'absolute',
                             top: '100%',
                             left: 0,
-                            zIndex: 100,
+                            zIndex: 2000,
                             background: 'var(--surface-1)',
-                            backgroundColor: 'var(--surface-1)',
+                            color: 'var(--text-primary)',
                             border: '1px solid var(--border)',
                             borderRadius: 4,
                             minWidth: '120px',
@@ -232,7 +245,6 @@ export function Admin() {
                             marginTop: 4,
                             opacity: 1,
                             visibility: 'visible',
-                            color: 'var(--text-primary)',
                             display: 'block'
                           }}>
                             <div
@@ -441,101 +453,60 @@ export function Admin() {
                       Next →
                     </button>
                   </div>
+                </>
+              )}
+            </>
+          )}
 
-                  <div className="queue-mobile-list">
-                    {queue.map((e) => (
-                      <div
-                        key={e.id}
-                        className={`queue-card ${selectedId === e.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedId(e.id)}
-                      >
-                        <div className="queue-card-header">
-                          <div className="queue-card-badge-group">
-                            <span
-                              className="queue-conf-badge"
-                              style={{
-                                color: statusToken('manual_review').color,
-                                borderColor: statusToken('manual_review').color,
+          {tab === 'clusters' && (
+            <>
+              <div className="card-head">
+                <span className="card-title">Event Clusters</span>
+                <span className="card-note">Temporal-Spatial Grouping</span>
+              </div>
+              {loading && clusters.length === 0 ? (
+                <div className="empty">Loading clusters…</div>
+              ) : clusters.length === 0 ? (
+                <div className="empty">No clusters found in the review queue.</div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="queue-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>City</th>
+                        <th>Count</th>
+                        <th>Time Window</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clusters.map((c) => (
+                        <tr key={c.cluster_id}>
+                          <td><Tag>{categoryLabel(c.category)}</Tag></td>
+                          <td>{c.city}</td>
+                          <td className="num">{c.event_count}</td>
+                          <td className="muted" style={{ fontSize: 11 }}>
+                            {new Date(c.time_range.start).toLocaleDateString()} - {new Date(c.time_range.end).toLocaleDateString()}
+                          </td>
+                          <td>
+                            <button
+                              className="btn"
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => {
+                                // For now, we just highlight the first event in the cluster
+                                setSelectedId(c.event_ids[0])
+                                setTab('queue')
                               }}
                             >
-                              {(e.confidence_score * 100).toFixed(0)}% Conf
-                            </span>
-                            <Tag>{sourceLabel(e.source)}</Tag>
-                          </div>
-                          <span className="queue-card-location">
-                            <strong>{e.city}</strong>, {e.state}
-                          </span>
-                        </div>
-
-                        <div className="queue-card-body">
-                          <p className="queue-card-text">{e.text}</p>
-                          <div className="queue-card-meta">
-                            <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
-                            {e.verification?.reasons.length ? (
-                              <span className="queue-flag-note">
-                                ⚠ {e.verification.reasons.join('; ')}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        <div className="queue-card-actions">
-                          <button
-                            type="button"
-                            className="btn btn-approve queue-btn"
-                            disabled={busyId === e.id}
-                            onClick={(ev) => {
-                              ev.stopPropagation()
-                              act(e.id, 'approve')
-                            }}
-                          >
-                            ✓ Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-reject queue-btn"
-                            disabled={busyId === e.id}
-                            onClick={(ev) => {
-                              ev.stopPropagation()
-                              act(e.id, 'reject')
-                            }}
-                          >
-                            ✕ Reject
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '12px',
-                      fontSize: 12,
-                      color: 'var(--text-secondary)',
-                      borderTop: '1px solid var(--border)'
-                    }}>
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={offset === 0}
-                        onClick={() => setOffset(prev => prev - LIMIT)}
-                        style={{ padding: '4px 8px' }}
-                      >
-                        ← Previous
-                      </button>
-                      <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={queue.length < LIMIT}
-                        onClick={() => setOffset(prev => prev + LIMIT)}
-                        style={{ padding: '4px 8px' }}
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  </div>
-                </>
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </>
           )}

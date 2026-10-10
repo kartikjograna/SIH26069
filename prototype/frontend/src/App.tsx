@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard'
 import { Admin } from './pages/Admin'
+import { ReportPage } from './pages/ReportPage'
 import { useLiveEvents } from './hooks/useLiveEvents'
 import { ConnectingOverlay } from './components/ConnectingOverlay'
 
@@ -46,6 +47,9 @@ export function App() {
           <NavLink to="/" className={({ isActive }) => (isActive ? 'active' : '')} end>
             Dashboard
           </NavLink>
+          <NavLink to="/report" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Submit Report
+          </NavLink>
           <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>
             Admin
           </NavLink>
@@ -75,6 +79,7 @@ export function App() {
       <main className="main">
         <Routes>
           <Route path="/" element={<Dashboard liveEvents={events} liveCount={count} />} />
+          <Route path="/report" element={<ReportPage />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
