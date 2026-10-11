@@ -34,6 +34,7 @@ export function Admin() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(!hasCache)
+  const [refreshing, setRefreshing] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
 
   // Pagination & Sorting State
@@ -43,8 +44,9 @@ export function Admin() {
   const [confRange, setConfRange] = useState({ min: 0, max: 1 })
   const LIMIT = 50
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isBackground = false) => {
     try {
+      if (isBackground) setRefreshing(true)
       // Fetch all admin data in parallel to eliminate the request waterfall
       const [qRes, c, s, r] = await Promise.all([
         api.reviewQueue({
@@ -70,15 +72,21 @@ export function Admin() {
       setRecent(r)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reach the backend')
+      const msg = err instanceof Error ? err.message : 'Failed to reach the backend'
+      if (!isBackground) {
+        setError(msg)
+      } else {
+        console.warn('Background refresh failed:', msg)
+      }
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [offset, sortBy, sortDir, confRange])
 
   useEffect(() => {
     load()
-    const id = window.setInterval(load, 8000)
+    const id = window.setInterval(() => load(true), 60000)
     return () => window.clearInterval(id)
   }, [load])
 
@@ -159,29 +167,30 @@ export function Admin() {
       {error && <div className="error-box">{error}</div>}
       {notice && <div className="ok-box">{notice}</div>}
 
-      <div className="kpi-row">
+      <div className="kpi-row" style={{ position: 'relative' }}>
         <StatTile
           label="Awaiting review"
           value={queue.length}
           swatch={statusToken('manual_review').color}
-          loading={loading && queue.length === 0 && sources.length === 0}
+          loading={loading && queue.length === 0}
           hero
         />
         <StatTile
           label="Known sources"
           value={sources.length}
-          loading={loading && queue.length === 0 && sources.length === 0}
+          loading={loading && sources.length === 0}
         />
         <StatTile
           label="Mean source credibility"
           value={`${(avgCredibility * 100).toFixed(0)}%`}
-          loading={loading && queue.length === 0 && sources.length === 0}
+          loading={loading && sources.length === 0}
         />
         <StatTile
           label="Reports attributed"
           value={totalReports}
-          loading={loading && queue.length === 0 && sources.length === 0}
+          loading={loading && sources.length === 0}
         />
+        {refreshing && <div style={{ position: 'absolute', top: -20, right: 0, fontSize: 10, opacity: 0.5 }}>Refreshing...</div>}
       </div>
 
       <div className="admin-tabs">
