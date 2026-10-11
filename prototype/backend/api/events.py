@@ -73,6 +73,21 @@ async def list_events(
     return events
 
 
+@router.get("/bulk", response_model=List[WeatherEventSchema])
+async def get_events_bulk(
+    ids: List[int] = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch multiple events by their IDs in a single query to avoid N+1 requests."""
+    stmt = (
+        select(WeatherEvent)
+        .options(selectinload(WeatherEvent.verification))
+        .where(WeatherEvent.id.in_(ids))
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
 @router.get("/{event_id}", response_model=WeatherEventSchema)
 async def get_event(event_id: int, db: AsyncSession = Depends(get_db)):
     stmt = (

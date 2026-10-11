@@ -118,6 +118,8 @@ export const api = {
     request<WeatherEvent[]>(`/api/admin/events/recent?limit=${limit}`),
 
   getClusters: () => request<any[]>('/api/admin/clusters'),
+  getEventsBulk: (ids: number[]) =>
+    request<WeatherEvent[]>(`/api/events/bulk?ids=${ids.join(',')}`),
 }
 
 export { ApiError }
