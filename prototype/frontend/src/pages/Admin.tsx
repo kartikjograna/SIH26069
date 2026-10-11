@@ -209,474 +209,476 @@ export function Admin() {
         ))}
       </div>
 
-      {inspectingClusterId && (
+{inspectingClusterId ? (
         <ClusterDetailView
           clusterId={inspectingClusterId}
           eventIds={clusters.find(c => c.cluster_id === inspectingClusterId)?.event_ids ?? []}
           onBack={() => setInspectingClusterId(null)}
         />
       ) : (
-        <div className="admin-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px',
-          alignItems: 'start'
-        }}>
-          <div className="card">
-            {tab === 'queue' && (
-              <>
-                <div className="card-head">
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    width: '100%',
-                    gap: 16
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span className="card-title">Manual Review Queue</span>
-                      <span className="card-note" style={{ fontSize: 13, opacity: 0.8 }}>
-                        Events with medium confidence require human expert verification.
-                      </span>
-                    </div>
+        <>
+          <div className="admin-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '24px',
+            alignItems: 'start'
+          }}>
+            <div className="card">
+              {tab === 'queue' && (
+                <>
+                  <div className="card-head">
                     <div style={{
                       display: 'flex',
-                      gap: 12,
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      flexShrink: 0,
-                      backgroundColor: 'var(--hover-wash)',
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      border: '1px solid var(--border)'
+                      width: '100%',
+                      gap: 16
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Sort:</span>
-                        <div style={{ position: 'relative' }}>
-                          <button
-                            type="button"
-                            onClick={() => setSortOpen(!sortOpen)}
-                            style={{
-                              fontSize: 12,
-                              padding: '2px 8px',
-                              borderRadius: 4,
-                              border: '1px solid var(--border)',
-                              background: 'var(--bg-primary)',
-                              color: 'var(--text-primary)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4
-                            }}
-                          >
-                            {sortBy === 'ingested_at' ? 'Newest First' : 'Most Uncertain'}
-                            <span style={{ fontSize: 10, opacity: 1 }}>▾</span>
-                          </button>
-                          {sortOpen && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '100%',
-                              left: 0,
-                              zIndex: 2000,
-                              background: 'var(--surface-1)',
-                              color: 'var(--text-primary)',
-                              border: '1px solid var(--border)',
-                              borderRadius: 4,
-                              minWidth: '120px',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                              marginTop: 4,
-                              opacity: 1,
-                              visibility: 'visible',
-                              display: 'block'
-                            }}>
-                              <div
-                                onClick={() => {
-                                  setSortBy('ingested_at')
-                                  setSortDir('desc')
-                                  setOffset(0)
-                                  setSortOpen(false)
-                                }}
-                                style={{
-                                  padding: '6px 12px',
-                                  fontSize: 12,
-                                  cursor: 'pointer',
-                                  color: 'var(--text-primary)',
-                                  background: sortBy === 'ingested_at' ? 'var(--hover-wash)' : 'var(--bg-primary)',
-                                  borderBottom: '1px solid var(--border)'
-                                }}
-                              >
-                                Newest First
-                              </div>
-                              <div
-                                onClick={() => {
-                                  setSortBy('confidence_score')
-                                  setSortDir('asc')
-                                  setOffset(0)
-                                  setSortOpen(false)
-                                }}
-                                style={{
-                                  padding: '6px 12px',
-                                  fontSize: 12,
-                                  cursor: 'pointer',
-                                  color: 'var(--text-primary)',
-                                  background: sortBy === 'confidence_score' ? 'var(--hover-wash)' : 'var(--bg-primary)',
-                                  borderBottom: '1px solid var(--border)'
-                                }}
-                              >
-                                Most Uncertain
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="card-title">Manual Review Queue</span>
+                        <span className="card-note" style={{ fontSize: 13, opacity: 0.8 }}>
+                          Events with medium confidence require human expert verification.
+                        </span>
                       </div>
-                      <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                        <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Conf:</span>
-                        <div style={{ width: '50px', flexShrink: 0 }}>
-                          <input
-                            type="number"
-                            value={confRange.min * 100}
-                            onChange={(e) => {
-                              setConfRange(prev => ({ ...prev, min: parseFloat(e.target.value || '0') / 100 }))
-                              setOffset(0)
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'center',
-                              padding: '2px 2px',
-                              borderRadius: 4,
-                              border: '1px solid var(--border)',
-                              background: 'var(--bg-primary)',
-                              color: 'var(--text-primary)',
-                              boxSizing: 'border-box',
-                              appearance: 'textfield',
-                              WebkitAppearance: 'none',
-                              MozAppearance: 'textfield'
-                            }}
-                          />
+                      <div style={{
+                        display: 'flex',
+                        gap: 12,
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        backgroundColor: 'var(--hover-wash)',
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        border: '1px solid var(--border)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Sort:</span>
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => setSortOpen(!sortOpen)}
+                              style={{
+                                fontSize: 12,
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              {sortBy === 'ingested_at' ? 'Newest First' : 'Most Uncertain'}
+                              <span style={{ fontSize: 10, opacity: 1 }}>▾</span>
+                            </button>
+                            {sortOpen && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                zIndex: 2000,
+                                background: 'var(--surface-1)',
+                                color: 'var(--text-primary)',
+                                border: '1px solid var(--border)',
+                                borderRadius: 4,
+                                minWidth: '120px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                marginTop: 4,
+                                opacity: 1,
+                                visibility: 'visible',
+                                display: 'block'
+                              }}>
+                                <div
+                                  onClick={() => {
+                                    setSortBy('ingested_at')
+                                    setSortDir('desc')
+                                    setOffset(0)
+                                    setSortOpen(false)
+                                  }}
+                                  style={{
+                                    padding: '6px 12px',
+                                    fontSize: 12,
+                                    cursor: 'pointer',
+                                    color: 'var(--text-primary)',
+                                    background: sortBy === 'ingested_at' ? 'var(--hover-wash)' : 'var(--bg-primary)',
+                                    borderBottom: '1px solid var(--border)'
+                                  }}
+                                >
+                                  Newest First
+                                </div>
+                                <div
+                                  onClick={() => {
+                                    setSortBy('confidence_score')
+                                    setSortDir('asc')
+                                    setOffset(0)
+                                    setSortOpen(false)
+                                  }}
+                                  style={{
+                                    padding: '6px 12px',
+                                    fontSize: 12,
+                                    cursor: 'pointer',
+                                    color: 'var(--text-primary)',
+                                    background: sortBy === 'confidence_score' ? 'var(--hover-wash)' : 'var(--bg-primary)',
+                                    borderBottom: '1px solid var(--border)'
+                                  }}
+                                >
+                                  Most Uncertain
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ opacity: 0.5 }}>-</span>
-                        <div style={{ width: '50px', flexShrink: 0 }}>
-                          <input
-                            type="number"
-                            value={confRange.max * 100}
-                            onChange={(e) => {
-                              setConfRange(prev => ({ ...prev, max: parseFloat(e.target.value || '0') / 100 }))
-                              setOffset(0)
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'center',
-                              padding: '2px 2px',
-                              borderRadius: 4,
-                              border: '1px solid var(--border)',
-                              background: 'var(--bg-primary)',
-                              color: 'var(--text-primary)',
-                              boxSizing: 'border-box',
-                              appearance: 'textfield',
-                              WebkitAppearance: 'none',
-                              MozAppearance: 'textfield'
-                            }}
-                          />
+                        <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                          <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Conf:</span>
+                          <div style={{ width: '50px', flexShrink: 0 }}>
+                            <input
+                              type="number"
+                              value={confRange.min * 100}
+                              onChange={(e) => {
+                                setConfRange(prev => ({ ...prev, min: parseFloat(e.target.value || '0') / 100 }))
+                                setOffset(0)
+                              }}
+                              style={{
+                                width: '100%',
+                                textAlign: 'center',
+                                padding: '2px 2px',
+                                borderRadius: 4,
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)',
+                                boxSizing: 'border-box',
+                                appearance: 'textfield',
+                                WebkitAppearance: 'none',
+                                MozAppearance: 'textfield'
+                              }}
+                            />
+                          </div>
+                          <span style={{ opacity: 0.5 }}>-</span>
+                          <div style={{ width: '50px', flexShrink: 0 }}>
+                            <input
+                              type="number"
+                              value={confRange.max * 100}
+                              onChange={(e) => {
+                                setConfRange(prev => ({ ...prev, max: parseFloat(e.target.value || '0') / 100 }))
+                                setOffset(0)
+                              }}
+                              style={{
+                                width: '100%',
+                                textAlign: 'center',
+                                padding: '2px 2px',
+                                borderRadius: 4,
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)',
+                                boxSizing: 'border-box',
+                                appearance: 'textfield',
+                                WebkitAppearance: 'none',
+                                MozAppearance: 'textfield'
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontWeight: 500 }}>%</span>
                         </div>
-                        <span style={{ fontWeight: 500 }}>%</span>
                       </div>
                     </div>
                   </div>
-                </div>
-                {loading && queue.length === 0 ? (
-                  <div className="empty">Loading queue…</div>
-                ) : queue.length === 0 ? (
-                  <div className="empty">
-                    Queue is clear — nothing is waiting on a human right now.
+                  {loading && queue.length === 0 ? (
+                    <div className="empty">Loading queue…</div>
+                  ) : queue.length === 0 ? (
+                    <div className="empty">
+                      Queue is clear — nothing is waiting on a human right now.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="table-wrap queue-desktop-table">
+                        <table className="queue-table">
+                          <thead>
+                            <tr>
+                              <th>Conf.</th>
+                              <th>Location</th>
+                              <th>Report</th>
+                              <th>Source</th>
+                              <th>Flagged for</th>
+                              <th className="sticky-action-col">Decision</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {queue.map((e) => (
+                              <tr
+                                key={e.id}
+                                onClick={() => setSelectedId(e.id)}
+                                style={{ cursor: 'pointer' }}
+                                className={selectedId === e.id ? 'row-selected' : ''}
+                              >
+                                <td className="num">
+                                  <strong style={{ color: statusToken('manual_review').color }}>
+                                    {(e.confidence_score * 100).toFixed(0)}%
+                                  </strong>
+                                </td>
+                                <td>
+                                  <div style={{ fontWeight: 600, fontSize: 12 }}>{e.city}</div>
+                                  <div className="muted" style={{ fontSize: 11 }}>
+                                    {e.state}
+                                  </div>
+                                </td>
+                                <td className="cell-text">
+                                  {e.text}
+                                  <div style={{ marginTop: 4 }}>
+                                    <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
+                                  </div>
+                                </td>
+                                <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
+                                <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                  {e.verification?.reasons.length
+                                    ? e.verification.reasons.join('; ')
+                                    : '—'}
+                                </td>
+                                <td className="sticky-action-col">
+                                  <div className="btn-row">
+                                    <button
+                                      type="button"
+                                      className="btn btn-approve"
+                                      disabled={busyId === e.id}
+                                      onClick={(ev) => {
+                                        ev.stopPropagation()
+                                        act(e.id, 'approve')
+                                      }}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-reject"
+                                      disabled={busyId === e.id}
+                                      onClick={(ev) => {
+                                        ev.stopPropagation()
+                                        act(e.id, 'reject')
+                                      }}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px',
+                        borderTop: '1px solid var(--border)',
+                        fontSize: 12,
+                        color: 'var(--text-secondary)'
+                      }}>
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={offset === 0}
+                          onClick={() => setOffset(prev => prev - LIMIT)}
+                          style={{ padding: '4px 8px' }}
+                        >
+                          ← Previous
+                        </button>
+                        <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={queue.length < LIMIT}
+                          onClick={() => setOffset(prev => prev + LIMIT)}
+                          style={{ padding: '4px 8px' }}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {tab === 'clusters' && (
+                <>
+                  <div className="card-head">
+                    <span className="card-title">Event Clusters</span>
+                    <span className="card-note">Temporal-Spatial Grouping</span>
                   </div>
-                ) : (
-                  <>
-                    <div className="table-wrap queue-desktop-table">
+                  {loading && clusters.length === 0 ? (
+                    <div className="empty">Loading clusters…</div>
+                  ) : clusters.length === 0 ? (
+                    <div className="empty">No clusters found in the review queue.</div>
+                  ) : (
+                    <div className="table-wrap">
                       <table className="queue-table">
                         <thead>
                           <tr>
-                            <th>Conf.</th>
-                            <th>Location</th>
-                            <th>Report</th>
-                            <th>Source</th>
-                            <th>Flagged for</th>
-                            <th className="sticky-action-col">Decision</th>
+                            <th>Category</th>
+                            <th>City</th>
+                            <th>Count</th>
+                            <th>Time Window</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {queue.map((e) => (
-                            <tr
-                              key={e.id}
-                              onClick={() => setSelectedId(e.id)}
-                              style={{ cursor: 'pointer' }}
-                              className={selectedId === e.id ? 'row-selected' : ''}
-                            >
-                              <td className="num">
-                                <strong style={{ color: statusToken('manual_review').color }}>
-                                  {(e.confidence_score * 100).toFixed(0)}%
-                                </strong>
+                          {clusters.map((c) => (
+                            <tr key={c.cluster_id}>
+                              <td><Tag>{categoryLabel(c.category)}</Tag></td>
+                              <td>{c.city}</td>
+                              <td className="num">{c.event_count}</td>
+                              <td className="muted" style={{ fontSize: 11 }}>
+                                {new Date(c.time_range.start).toLocaleDateString()} - {new Date(c.time_range.end).toLocaleDateString()}
                               </td>
-                              <td>
-                                <div style={{ fontWeight: 600, fontSize: 12 }}>{e.city}</div>
-                                <div className="muted" style={{ fontSize: 11 }}>
-                                  {e.state}
-                                </div>
-                              </td>
-                              <td className="cell-text">
-                                {e.text}
-                                <div style={{ marginTop: 4 }}>
-                                  <Tag>{categoryLabel(topCategory(e.predicted_categories))}</Tag>
-                                </div>
-                              </td>
-                              <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
-                              <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                                {e.verification?.reasons.length
-                                  ? e.verification.reasons.join('; ')
-                                  : '—'}
-                              </td>
-                              <td className="sticky-action-col">
-                                <div className="btn-row">
-                                  <button
-                                    type="button"
-                                    className="btn btn-approve"
-                                    disabled={busyId === e.id}
-                                    onClick={(ev) => {
-                                      ev.stopPropagation()
-                                      act(e.id, 'approve')
-                                    }}
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-reject"
-                                    disabled={busyId === e.id}
-                                    onClick={(ev) => {
-                                      ev.stopPropagation()
-                                      act(e.id, 'reject')
-                                    }}
-                                  >
-                                    Reject
-                                  </button>
-                                </div>
+                              <td style={{ display: 'flex', gap: 8 }}>
+                                <button
+                                  className="btn"
+                                  style={{ padding: '2px 8px', fontSize: 11 }}
+                                  onClick={() => {
+                                    setInspectingClusterId(c.cluster_id)
+                                  }}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  className="btn btn-approve"
+                                  style={{ padding: '2px 8px', fontSize: 11 }}
+                                  onClick={() => actCluster(c.cluster_id, c.event_ids, 'approve')}
+                                >
+                                  Bulk Approve
+                                </button>
+                                <button
+                                  className="btn btn-reject"
+                                  style={{ padding: '2px 8px', fontSize: 11 }}
+                                  onClick={() => actCluster(c.cluster_id, c.event_ids, 'reject')}
+                                >
+                                  Bulk Reject
+                                </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '12px',
-                      borderTop: '1px solid var(--border)',
-                      fontSize: 12,
-                      color: 'var(--text-secondary)'
-                    }}>
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={offset === 0}
-                        onClick={() => setOffset(prev => prev - LIMIT)}
-                        style={{ padding: '4px 8px' }}
-                      >
-                        ← Previous
-                      </button>
-                      <span>Page {Math.floor(offset / LIMIT) + 1} of {Math.ceil(totalQueue / LIMIT) || 1}</span>
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={queue.length < LIMIT}
-                        onClick={() => setOffset(prev => prev + LIMIT)}
-                        style={{ padding: '4px 8px' }}
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
+                  )}
+                </>
+              )}
 
-            {tab === 'clusters' && (
-              <>
-                <div className="card-head">
-                  <span className="card-title">Event Clusters</span>
-                  <span className="card-note">Temporal-Spatial Grouping</span>
-                </div>
-                {loading && clusters.length === 0 ? (
-                  <div className="empty">Loading clusters…</div>
-                ) : clusters.length === 0 ? (
-                  <div className="empty">No clusters found in the review queue.</div>
-                ) : (
-                  <div className="table-wrap">
-                    <table className="queue-table">
-                      <thead>
-                        <tr>
-                          <th>Category</th>
-                          <th>City</th>
-                          <th>Count</th>
-                          <th>Time Window</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {clusters.map((c) => (
-                          <tr key={c.cluster_id}>
-                            <td><Tag>{categoryLabel(c.category)}</Tag></td>
-                            <td>{c.city}</td>
-                            <td className="num">{c.event_count}</td>
-                            <td className="muted" style={{ fontSize: 11 }}>
-                              {new Date(c.time_range.start).toLocaleDateString()} - {new Date(c.time_range.end).toLocaleDateString()}
-                            </td>
-                            <td style={{ display: 'flex', gap: 8 }}>
-                              <button
-                                className="btn"
-                                style={{ padding: '2px 8px', fontSize: 11 }}
-                                onClick={() => {
-                                  setInspectingClusterId(c.cluster_id)
-                                }}
-                              >
-                                View
-                              </button>
-                              <button
-                                className="btn btn-approve"
-                                style={{ padding: '2px 8px', fontSize: 11 }}
-                                onClick={() => actCluster(c.cluster_id, c.event_ids, 'approve')}
-                              >
-                                Bulk Approve
-                              </button>
-                              <button
-                                className="btn btn-reject"
-                                style={{ padding: '2px 8px', fontSize: 11 }}
-                                onClick={() => actCluster(c.cluster_id, c.event_ids, 'reject')}
-                              >
-                                Bulk Reject
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              {tab === 'sources' && (
+                <>
+                  <div className="card-head">
+                    <span className="card-title">Source credibility</span>
+                    <span className="card-note">feeds model 5 (XGBoost stand-in)</span>
                   </div>
-                )}
-              </>
-            )}
+                  {sources.length === 0 ? (
+                    <div className="empty">No sources recorded yet</div>
+                  ) : (
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Source</th>
+                            <th>Type</th>
+                            <th>Credibility</th>
+                            <th>Reports</th>
+                            <th>Verified</th>
+                            <th>Verified rate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sources.map((s) => {
+                            const rate =
+                              s.total_reports > 0 ? s.verified_reports / s.total_reports : 0
+                            return (
+                              <tr key={s.source_name}>
+                                <td style={{ fontWeight: 500 }}>{sourceLabel(s.source_name)}</td>
+                                <td>
+                                  <Tag>{s.source_type}</Tag>
+                                </td>
+                                <td className="num">{(s.credibility_score * 100).toFixed(0)}%</td>
+                                <td className="num">{s.total_reports.toLocaleString('en-IN')}</td>
+                                <td className="num">{s.verified_reports.toLocaleString('en-IN')}</td>
+                                <td className="num">
+                                  {s.total_reports > 0 ? `${(rate * 100).toFixed(0)}%` : '—'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
 
-            {tab === 'sources' && (
-              <>
-                <div className="card-head">
-                  <span className="card-title">Source credibility</span>
-                  <span className="card-note">feeds model 5 (XGBoost stand-in)</span>
-                </div>
-                {sources.length === 0 ? (
-                  <div className="empty">No sources recorded yet</div>
-                ) : (
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Source</th>
-                          <th>Type</th>
-                          <th>Credibility</th>
-                          <th>Reports</th>
-                          <th>Verified</th>
-                          <th>Verified rate</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sources.map((s) => {
-                          const rate =
-                            s.total_reports > 0 ? s.verified_reports / s.total_reports : 0
-                          return (
-                            <tr key={s.source_name}>
-                              <td style={{ fontWeight: 500 }}>{sourceLabel(s.source_name)}</td>
+              {tab === 'recent' && (
+                <>
+                  <div className="card-head">
+                    <span className="card-title">Recent activity</span>
+                    <span className="card-note">all statuses, newest first</span>
+                  </div>
+                  {recent.length === 0 ? (
+                    <div className="empty">No events yet</div>
+                  ) : (
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Status</th>
+                            <th>Conf.</th>
+                            <th>Location</th>
+                            <th>Report</th>
+                            <th>Source</th>
+                            <th>Ingested</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recent.map((e) => (
+                            <tr
+                              key={e.id}
+                              onClick={() => setSelectedId(e.id)}
+                              style={{ cursor: 'pointer' }}
+                            >
                               <td>
-                                <Tag>{s.source_type}</Tag>
+                                <StatusBadge status={e.verification_status} />
                               </td>
-                              <td className="num">{(s.credibility_score * 100).toFixed(0)}%</td>
-                              <td className="num">{s.total_reports.toLocaleString('en-IN')}</td>
-                              <td className="num">{s.verified_reports.toLocaleString('en-IN')}</td>
-                              <td className="num">
-                                {s.total_reports > 0 ? `${(rate * 100).toFixed(0)}%` : '—'}
+                              <td className="num">{(e.confidence_score * 100).toFixed(0)}%</td>
+                              <td style={{ fontSize: 12 }}>
+                                {e.city}
+                                <div className="muted" style={{ fontSize: 11 }}>
+                                  {e.state}
+                                </div>
+                              </td>
+                              <td className="cell-text">{e.text}</td>
+                              <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
+                              <td className="num muted" style={{ fontSize: 11 }}>
+                                {timeAgo(e.ingested_at)}
                               </td>
                             </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
-            )}
-
-            {tab === 'recent' && (
-              <>
-                <div className="card-head">
-                  <span className="card-title">Recent activity</span>
-                  <span className="card-note">all statuses, newest first</span>
-                </div>
-                {recent.length === 0 ? (
-                  <div className="empty">No events yet</div>
-                ) : (
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Status</th>
-                          <th>Conf.</th>
-                          <th>Location</th>
-                          <th>Report</th>
-                          <th>Source</th>
-                          <th>Ingested</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recent.map((e) => (
-                          <tr
-                            key={e.id}
-                            onClick={() => setSelectedId(e.id)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <td>
-                              <StatusBadge status={e.verification_status} />
-                            </td>
-                            <td className="num">{(e.confidence_score * 100).toFixed(0)}%</td>
-                            <td style={{ fontSize: 12 }}>
-                              {e.city}
-                              <div className="muted" style={{ fontSize: 11 }}>
-                                {e.state}
-                              </div>
-                            </td>
-                            <td className="cell-text">{e.text}</td>
-                            <td style={{ fontSize: 12 }}>{sourceLabel(e.source)}</td>
-                            <td className="num muted" style={{ fontSize: 11 }}>
-                              {timeAgo(e.ingested_at)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
-            )}
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="card">
-          <div className="card-head">
-            <span className="card-title">Spatial Analysis</span>
+          <div className="card">
+            <div className="card-head">
+              <span className="card-title">Spatial Analysis</span>
+            </div>
+            <EventMap
+              events={queue.map((e: any) => toMarker(e))}
+              focused={selected}
+              clusterIds={selectedClusterId ? clusters.find(c => c.cluster_id === selectedClusterId)?.event_ids : []}
+              onSelect={(e) => setSelectedId(e.id)}
+              loading={loading}
+            />
           </div>
-          <EventMap
-            events={queue.map((e: any) => toMarker(e))}
-            focused={selected}
-            clusterIds={selectedClusterId ? clusters.find(c => c.cluster_id === selectedClusterId)?.event_ids : []}
-            onSelect={(e) => setSelectedId(e.id)}
-            loading={loading}
-          />
-        </div>
-        <VerificationPanel event={selected} />
+          <VerificationPanel event={selected} />
+        </>
       )}
     </div>
   )
