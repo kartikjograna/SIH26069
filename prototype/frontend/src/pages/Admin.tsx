@@ -678,15 +678,21 @@ export function Admin() {
             <div className="card-head">
               <span className="card-title">Spatial Analysis</span>
             </div>
-            <EventMap
-              events={queue.map((e: any) => toMarker(e))}
-              focused={selected}
-              clusterIds={selectedClusterId ? clusters.find(c => c.cluster_id === selectedClusterId)?.event_ids : []}
-              onSelect={(e) => setSelectedId(e.id)}
-              loading={loading}
-            />
+            {queue && queue.length > 0 ? (
+              <EventMap
+                events={queue.map((e: any) => toMarker(e))}
+                focused={selected}
+                clusterIds={selectedClusterId ? clusters.find(c => c.cluster_id === selectedClusterId)?.event_ids ?? [] : []}
+                onSelect={(e) => setSelectedId(e.id)}
+                loading={loading}
+              />
+            ) : (
+              <div className="empty" style={{ padding: '40px', textAlign: 'center' }}>
+                {loading ? 'Loading map data...' : 'No events to display on map'}
+              </div>
+            )}
           </div>
-          <VerificationPanel event={selected} />
+          {selected && <VerificationPanel event={selected} />}
         </>
       )}
     </div>
