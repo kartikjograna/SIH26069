@@ -17,6 +17,10 @@ engine = create_async_engine(
     future=True,
     connect_args=settings.CONNECT_ARGS,
     pool_pre_ping=True,
+    pool_size=5,            # Limit total connections to prevent hitting Neon's cap
+    max_overflow=10,         # Allow temporary bursts, but not too many
+    pool_recycle=3600,       # Recycle connections every hour to clear "zombies"
+    pool_timeout=30,         # Fail fast if a connection can't be acquired
 )
 
 AsyncSessionLocal = async_sessionmaker(
