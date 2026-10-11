@@ -21,11 +21,12 @@ function FocusOn({ target }: { target: EventMarker | null }) {
 interface Props {
   events: EventMarker[]
   focused: EventMarker | null
+  clusterIds?: number[]
   onSelect: (e: EventMarker) => void
   loading?: boolean
 }
 
-export function EventMap({ events, focused, onSelect, loading }: Props) {
+export function EventMap({ events, focused, clusterIds, onSelect, loading }: Props) {
   return (
     <div>
       <div className="map-wrap" style={{ position: 'relative' }}>
@@ -58,17 +59,19 @@ export function EventMap({ events, focused, onSelect, loading }: Props) {
           {events.map((e) => {
             const token = statusToken(e.verification_status)
             const isFocused = focused?.id === e.id
+            const isClusterMember = clusterIds?.includes(e.id)
+
             return (
               <CircleMarker
                 key={e.id}
                 center={[e.latitude, e.longitude]}
                 // Confidence drives size; status drives color.
-                radius={isFocused ? 11 : 5 + e.confidence_score * 5}
+                radius={isFocused ? 11 : isClusterMember ? 8 : 5 + e.confidence_score * 5}
                 pathOptions={{
-                  color: '#fcfcfb', // 2px surface ring keeps overlaps legible
-                  weight: 2,
+                  color: isClusterMember ? 'var(--accent)' : '#fcfcfb', // Blue ring for cluster members
+                  weight: isClusterMember ? 3 : 2,
                   fillColor: token.color,
-                  fillOpacity: 0.85,
+                  fillOpacity: isClusterMember ? 1 : 0.85,
                 }}
                 eventHandlers={{ click: () => onSelect(e) }}
               >
@@ -94,6 +97,7 @@ export function EventMap({ events, focused, onSelect, loading }: Props) {
           })}
         </MapContainer>
       </div>
+
 
       <div className="map-legend">
         {[STATUS.verified, STATUS.manual_review, STATUS.rejected].map((s) => (

@@ -9,7 +9,8 @@ import math
 
 from ..database import get_db
 from ..models import WeatherEvent, VerificationResult, SourceCredibility
-from ..schemas import ManualReviewAction, WeatherEventSchema, SourceCredibilitySchema, ReviewQueueResponse, ClusterResponse
+from ..schemas import ManualReviewAction, WeatherEventSchema, SourceCredibilitySchema, ReviewQueueResponse, ClusterResponse, LeanWeatherEventSchema
+
 from .events import invalidate_stats_cache
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -51,7 +52,6 @@ async def review_queue(
     total = total_res.scalar() or 0
 
     # 4. Apply sorting and pagination to the final results query
-    # Map sort_by string to actual model attribute
     sort_attr = WeatherEvent.ingested_at if sort_by == "ingested_at" else WeatherEvent.confidence_score
     order_expr = sort_attr.desc() if sort_dir == "desc" else sort_attr.asc()
 
@@ -64,7 +64,10 @@ async def review_queue(
     )
 
     result = await db.execute(stmt)
-    items = result.scalars().all()
+    events = result.scalars().all()
+
+    # Convert to lean schema to reduce memory during serialization
+    items = [LeanWeatherEventSchema.from_orm_with_reasons(e) for e in events]
 
     return ReviewQueueResponse(items=items, total=total)
 
@@ -164,6 +167,38 @@ async def review_action(action: ManualReviewAction, db: AsyncSession = Depends(g
     await db.commit()
     invalidate_stats_cache()
     return {"event_id": action.event_id, "new_status": new_status, "notes": action.notes}
+
+
+@router.post("/review-cluster")
+async def review_cluster(
+    cluster_id: str,
+    action: str,
+    db: AsyncSession = Depends(get_db),
+    # We'll pass event_ids in the request body or as a query,
+    # but since the server calculates clusters, let's have the client send the IDs for safety.
+    event_ids: List[int] = Query(...)
+):
+    """Bulk approve or reject a cluster of events."""
+    if action not in ("approve", "reject"):
+        raise HTTPException(400, "action must be 'approve' or 'reject'")
+
+    new_status = "verified" if action == "approve" else "rejected"
+
+    stmt = (
+        update(WeatherEvent)
+        .where(WeatherEvent.id.in_(event_ids))
+        .values(verification_status=new_status)
+    )
+
+    result = await db.execute(stmt)
+    await db.commit()
+    invalidate_stats_cache()
+
+    return {
+        "cluster_id": cluster_id,
+        "processed_count": result.rowcount,
+        "new_status": new_status
+    }
 
 
 @router.get("/sources", response_model=list[SourceCredibilitySchema])

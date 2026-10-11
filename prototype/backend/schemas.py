@@ -69,9 +69,38 @@ class WeatherEventSchema(BaseModel):
     verification: Optional[VerificationResultSchema] = None
 
 
+class LeanWeatherEventSchema(BaseModel):
+    """A lightweight version of WeatherEvent for list views to reduce memory overhead."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    text: str
+    city: str
+    state: str
+    source: str
+    confidence_score: float
+    verification_status: str
+    predicted_categories: Dict[str, float]
+    # We only return the reasons, not the full verification object
+    verification_reasons: Optional[List[str]] = None
+
+    @classmethod
+    def from_orm_with_reasons(cls, obj):
+        return cls(
+            id=obj.id,
+            text=obj.text,
+            city=obj.city,
+            state=obj.state,
+            source=obj.source,
+            confidence_score=obj.confidence_score,
+            verification_status=obj.verification_status,
+            predicted_categories=obj.predicted_categories,
+            verification_reasons=obj.verification.reasons if obj.verification else None
+        )
+
+
 class ReviewQueueResponse(BaseModel):
     """Wrapped response for the admin review queue to support pagination."""
-    items: List[WeatherEventSchema]
+    items: List[LeanWeatherEventSchema]
     total: int
 
 

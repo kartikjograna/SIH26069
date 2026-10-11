@@ -106,6 +106,12 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ event_id, action, notes: notes ?? null }) },
     ),
 
+  reviewCluster: (clusterId: string, action: 'approve' | 'reject', eventIds: number[]) =>
+    request<{ cluster_id: string; processed_count: number; new_status: string }>(
+      `/api/admin/review-cluster?action=${action}&cluster_id=${clusterId}&event_ids=${eventIds.join(',')}`,
+      { method: 'POST' }
+    ),
+
   sources: () => request<SourceCredibility[]>('/api/admin/sources'),
 
   recentEvents: (limit = 50) =>

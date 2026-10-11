@@ -6,6 +6,7 @@ import { categoryLabel, sourceLabel, statusToken } from '../theme'
 import { StatTile } from '../components/StatTile'
 import { StatusBadge, Tag } from '../components/StatusBadge'
 import { VerificationPanel } from '../components/VerificationPanel'
+import { EventMap } from '../components/EventMap'
 import { timeAgo } from '../components/EventList'
 
 type Tab = 'queue' | 'clusters' | 'sources' | 'recent'
@@ -25,7 +26,9 @@ export function Admin() {
   const [sources, setSources] = useState<SourceCredibility[]>(cachedSources ?? [])
   const [recent, setRecent] = useState<WeatherEvent[]>(cachedRecent ?? [])
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
+
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(!hasCache)
@@ -40,18 +43,20 @@ export function Admin() {
 
   const load = useCallback(async () => {
     try {
-      // Load sequentially instead of Promise.all to avoid choking Render Free Tier on boot
-      const qRes = await api.reviewQueue({
-        limit: LIMIT,
-        offset,
-        sortBy,
-        sortDir,
-        minConf: confRange.min,
-        maxConf: confRange.max,
-      })
-      const c = await api.getClusters()
-      const s = await api.sources()
-      const r = await api.recentEvents(60)
+      // Fetch all admin data in parallel to eliminate the request waterfall
+      const [qRes, c, s, r] = await Promise.all([
+        api.reviewQueue({
+          limit: LIMIT,
+          offset,
+          sortBy,
+          sortDir,
+          minConf: confRange.min,
+          maxConf: confRange.max,
+        }),
+        api.getClusters(),
+        api.sources(),
+        api.recentEvents(60),
+      ])
 
       cachedQueue = qRes.items
       cachedSources = s
@@ -95,11 +100,40 @@ export function Admin() {
     }
   }
 
+  async function actCluster(clusterId: string, eventIds: number[], action: 'approve' | 'reject') {
+    setError(null)
+    try {
+      const res = await api.reviewCluster(clusterId, action, eventIds)
+      setQueue((prev) => {
+        const next = prev.filter((e) => !eventIds.includes(e.id))
+        cachedQueue = next
+        return next
+      })
+      setClusters((prev) => {
+        const next = prev.filter((c) => c.cluster_id !== clusterId)
+        return next
+      })
+      setNotice(`Cluster ${clusterId} marked ${res.new_status}. Processed ${res.processed_count} events.`)
+      window.setTimeout(() => setNotice(null), 4000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bulk action failed')
+    }
+  }
+
   const selected = useMemo(() => {
     const pool = tab === 'recent' ? recent : queue
     const found = pool.find((e) => e.id === selectedId)
     return found ? toMarker(found) : null
   }, [selectedId, queue, recent, tab])
+
+  const selectedClusterEvents = useMemo(() => {
+    if (!selectedClusterId) return []
+    const cluster = clusters.find(c => c.cluster_id === selectedClusterId)
+    if (!cluster) return []
+    return queue
+      .filter(e => cluster.event_ids.includes(e.id))
+      .map(e => toMarker(e))
+  }, [selectedClusterId, clusters, queue])
 
   const avgCredibility = useMemo(() => {
     if (sources.length === 0) return 0
@@ -121,6 +155,12 @@ export function Admin() {
       <p className="section-sub">
         Events the models scored between 60% and 85% land here for an expert decision.
       </p>
+      {selectedClusterId && (
+        <div className="ok-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Viewing <strong>Cluster {selectedClusterId}</strong>. Members are highlighted in blue on the map.</span>
+          <button className="btn" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => setSelectedClusterId(null)}>Clear</button>
+        </div>
+      )}
 
       {error && <div className="error-box">{error}</div>}
       {notice && <div className="ok-box">{notice}</div>}
@@ -489,17 +529,31 @@ export function Admin() {
                           <td className="muted" style={{ fontSize: 11 }}>
                             {new Date(c.time_range.start).toLocaleDateString()} - {new Date(c.time_range.end).toLocaleDateString()}
                           </td>
-                          <td>
+                          <td style={{ display: 'flex', gap: 8 }}>
                             <button
                               className="btn"
                               style={{ padding: '2px 8px', fontSize: 11 }}
                               onClick={() => {
-                                // For now, we just highlight the first event in the cluster
-                                setSelectedId(c.event_ids[0])
+                                setSelectedClusterId(c.cluster_id)
+                                setSelectedId(null)
                                 setTab('queue')
                               }}
                             >
-                              View Details
+                              View
+                            </button>
+                            <button
+                              className="btn btn-approve"
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => actCluster(c.cluster_id, c.event_ids, 'approve')}
+                            >
+                              Bulk Approve
+                            </button>
+                            <button
+                              className="btn btn-reject"
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => actCluster(c.cluster_id, c.event_ids, 'reject')}
+                            >
+                              Bulk Reject
                             </button>
                           </td>
                         </tr>
@@ -611,6 +665,18 @@ export function Admin() {
           )}
         </div>
 
+        <div className="card">
+          <div className="card-head">
+            <span className="card-title">Spatial Analysis</span>
+          </div>
+          <EventMap
+            events={queue.map((e: any) => toMarker(e))}
+            focused={selected}
+            clusterIds={selectedClusterId ? clusters.find(c => c.cluster_id === selectedClusterId)?.event_ids : []}
+            onSelect={(e) => setSelectedId(e.id)}
+            loading={loading}
+          />
+        </div>
         <VerificationPanel event={selected} />
       </div>
     </div>
