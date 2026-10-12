@@ -45,50 +45,70 @@ export function Admin() {
   const LIMIT = 50
 
   const load = useCallback(async (isBackground = false) => {
-    try {
-      if (isBackground) setRefreshing(true)
-      // Fetch all admin data in parallel to eliminate the request waterfall
-      const [qRes, c, s, r] = await Promise.all([
-        api.reviewQueue({
-          limit: LIMIT,
-          offset,
-          sortBy,
-          sortDir,
-          minConf: confRange.min,
-          maxConf: confRange.max,
-        }),
-        api.getClusters(),
-        api.sources(),
-        api.recentEvents(60),
-      ])
+    // If we have cache and it's a background refresh, don't trigger the global loading state
+    if (isBackground && hasCache) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
 
-      cachedQueue = qRes.items
-      cachedSources = s
-      cachedRecent = r
-      setQueue(qRes.items)
-      setTotalQueue(qRes.total)
-      setClusters(c)
-      setSources(s)
-      setRecent(r)
+    try {
+      // Fetch each endpoint independently. This prevents one slow request (e.g. Clusters)
+      // from blocking the others (e.g. Queue) from updating the UI.
+      const fetchers = [
+        api.reviewQueue({ limit: LIMIT, offset, sortBy, sortDir, minConf: confRange.min, maxConf: confRange.max }).then(res => ({ type: 'queue', data: res })),
+        api.getClusters().then(data => ({ type: 'clusters', data })),
+        api.sources().then(data => ({ type: 'sources', data })),
+        api.recentEvents(60).then(data => ({ type: 'recent', data })),
+      ]
+
+      const results = await Promise.allSettled(fetchers)
+
+      results.forEach(result => {
+        if (result.status === 'fulfilled') {
+          const val = result.value as { type: string, data: any }
+          const { type, data } = val
+          if (type === 'queue') {
+            const queueData = data as { items: WeatherEvent[]; total: number }
+            cachedQueue = queueData.items
+            setQueue(queueData.items)
+            setTotalQueue(queueData.total)
+          } else if (type === 'clusters') {
+            setClusters(data as any[])
+          } else if (type === 'sources') {
+            cachedSources = data as SourceCredibility[]
+            setSources(data as SourceCredibility[])
+          } else if (type === 'recent') {
+            cachedRecent = data as WeatherEvent[]
+            setRecent(data as WeatherEvent[])
+          }
+        } else {
+          console.error(`Failed to fetch: ${result.reason}`)
+        }
+      })
+
       setError(null)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to reach the backend'
-      if (!isBackground) {
-        setError(msg)
-      } else {
-        console.warn('Background refresh failed:', msg)
-      }
+      if (!isBackground) setError(msg)
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [offset, sortBy, sortDir, confRange])
+  }, [offset, sortBy, sortDir, confRange, hasCache])
 
   useEffect(() => {
-    load()
+    // If we have cache, we don't trigger a blocking load.
+    // We just start the background refresh cycle.
+    if (hasCache) {
+      load(true)
+    } else {
+      load()
+    }
+
     const id = window.setInterval(() => load(true), 60000)
     return () => window.clearInterval(id)
-  }, [load])
+  }, [load, hasCache])
 
   async function act(eventId: number, action: 'approve' | 'reject') {
     setBusyId(eventId)
