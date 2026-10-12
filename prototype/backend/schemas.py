@@ -76,6 +76,8 @@ class LeanWeatherEventSchema(BaseModel):
     text: str
     city: str
     state: str
+    latitude: float
+    longitude: float
     source: str
     confidence_score: float
     verification_status: str
@@ -90,6 +92,8 @@ class LeanWeatherEventSchema(BaseModel):
             text=obj.text,
             city=obj.city,
             state=obj.state,
+            latitude=obj.latitude,
+            longitude=obj.longitude,
             source=obj.source,
             confidence_score=obj.confidence_score,
             verification_status=obj.verification_status,
