@@ -75,7 +75,13 @@ async def review_queue(
 @router.get("/clusters", response_model=List[ClusterResponse])
 async def get_clusters(db: AsyncSession = Depends(get_db)):
     """Group manual review events into temporal-spatial clusters."""
-    stmt = select(WeatherEvent).where(WeatherEvent.verification_status == "manual_review")
+    # Limit to the most recent 500 events to prevent O(N^2) explosion on large queues
+    stmt = (
+        select(WeatherEvent)
+        .where(WeatherEvent.verification_status == "manual_review")
+        .order_by(WeatherEvent.ingested_at.desc())
+        .limit(500)
+    )
     result = await db.execute(stmt)
     events = result.scalars().all()
 
@@ -85,7 +91,6 @@ async def get_clusters(db: AsyncSession = Depends(get_db)):
     # Step 1: Broad Grouping by City and Primary Category
     groups: Dict[tuple, List[WeatherEvent]] = {}
     for e in events:
-        # Get the category with the highest score
         category = "unknown"
         if e.predicted_categories:
             category = max(e.predicted_categories, key=e.predicted_categories.get)
@@ -99,9 +104,11 @@ async def get_clusters(db: AsyncSession = Depends(get_db)):
 
     # Step 2: Refined Clustering within each group
     for (city, category), group_events in groups.items():
-        processed = set()
+        # Safety: If a single group is too large, clustering it is too expensive
+        if len(group_events) > 200:
+            continue
 
-        # Sort events by time to make seed selection consistent
+        processed = set()
         sorted_events = sorted(group_events, key=lambda x: x.event_time)
 
         for i, seed in enumerate(sorted_events):
@@ -119,13 +126,12 @@ async def get_clusters(db: AsyncSession = Depends(get_db)):
 
                 # Temporal Threshold: +/- 6 hours
                 time_diff = abs((candidate.event_time - seed.event_time).total_seconds())
-                is_temporal = time_diff <= (6 * 3600)
+                if time_diff > (6 * 3600):
+                    continue
 
                 # Spatial Threshold: <= 10km
                 dist = haversine_distance(seed.latitude, seed.longitude, candidate.latitude, candidate.longitude)
-                is_spatial = dist <= 10.0
-
-                if is_temporal and is_spatial:
+                if dist <= 10.0:
                     cluster_ids.append(candidate.id)
                     member_events.append(candidate)
                     processed.add(candidate.id)

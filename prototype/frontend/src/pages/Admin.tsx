@@ -700,7 +700,9 @@ export function Admin() {
             </div>
             {queue && queue.length > 0 ? (
               <EventMap
-                events={queue.map((e: any) => toMarker(e))}
+                events={queue
+                  .filter(e => e.latitude !== undefined && e.longitude !== undefined)
+                  .map((e: any) => toMarker(e))}
                 focused={selected}
                 clusterIds={selectedClusterId ? clusters.find(c => c.cluster_id === selectedClusterId)?.event_ids ?? [] : []}
                 onSelect={(e) => setSelectedId(e.id)}
@@ -708,7 +710,7 @@ export function Admin() {
               />
             ) : (
               <div className="empty" style={{ padding: '40px', textAlign: 'center' }}>
-                {loading ? 'Loading map data...' : 'No events to display on map'}
+                {loading ? 'Loading map data...' : 'No events with coordinates to display on map'}
               </div>
             )}
           </div>
